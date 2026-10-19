@@ -11,9 +11,47 @@ $photos = db()->query('
     ORDER BY photos.id DESC
 ')->fetchAll();
 
-render_header('相册墙', $user, 'home');
+$rows = db()->query('
+    SELECT messages.*, users.display_name
+    FROM messages
+    JOIN users ON users.id = messages.user_id
+    ORDER BY messages.id ASC
+')->fetchAll();
+
+$threads = [];
+$replies = [];
+foreach ($rows as $row) {
+    if (empty($row['parent_id'])) {
+        $threads[] = $row;
+    } else {
+        $replies[(int) $row['parent_id']][] = $row;
+    }
+}
+$threads = array_reverse($threads);
+
+render_header('首页', $user, 'home');
 ?>
 <section class="page-head">
+    <h1>留言板</h1>
+</section>
+<?php if (!$threads): ?>
+    <div class="empty">还没有留言。</div>
+<?php else: ?>
+    <?php foreach ($threads as $msg): ?>
+        <article class="msg" id="msg-<?= (int) $msg['id'] ?>">
+            <div class="who-line"><?= h($msg['display_name']) ?> · <?= h($msg['created_at']) ?></div>
+            <p><?= h($msg['content']) ?></p>
+            <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
+                <article class="msg reply">
+                    <div class="who-line"><?= h($reply['display_name']) ?> · <?= h($reply['created_at']) ?></div>
+                    <p><?= h($reply['content']) ?></p>
+                </article>
+            <?php endforeach; ?>
+        </article>
+    <?php endforeach; ?>
+<?php endif; ?>
+
+<section class="page-head album-head">
     <h1>相册墙</h1>
 </section>
 <?php if (!$photos): ?>

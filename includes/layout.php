@@ -16,9 +16,7 @@ function render_header(string $title, array $user, string $active = ''): void
 <body>
     <div class="grain"></div>
     <header class="topbar">
-        <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false">
-            <span></span><span></span><span></span>
-        </button>
+        <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false">菜单</button>
         <a class="brand" href="/index.php">
             <span class="brand-mark"></span>
             <?= h(app_name()) ?>
@@ -34,9 +32,9 @@ function render_header(string $title, array $user, string $active = ''): void
             <button class="drawer-close" type="button" aria-label="关闭菜单">关闭</button>
         </div>
         <nav class="drawer-nav">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">相册墙</a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
+            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">首页</a>
             <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
+            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
