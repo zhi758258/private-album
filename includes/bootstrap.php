@@ -92,6 +92,13 @@ function init_schema(PDO $pdo): void
         $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
         $ins->execute([':key' => 'site_name', ':value' => '私藏']);
     }
+    $exists->execute([':key' => 'notice_title']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $ins->execute([':key' => 'notice_title', ':value' => '']);
+        $ins->execute([':key' => 'notice_content', ':value' => '']);
+        $ins->execute([':key' => 'notice_updated', ':value' => '']);
+    }
     $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
     $names = array_column($cols, 'name');
     if (!in_array('parent_id', $names, true)) {
@@ -119,17 +126,72 @@ function now(): string
     return date('Y-m-d H:i:s');
 }
 
+function setting_get(string $key, string $default = ''): string
+{
+    $stmt = db()->prepare('SELECT value FROM settings WHERE key = :key');
+    $stmt->execute([':key' => $key]);
+    $value = $stmt->fetchColumn();
+    return is_string($value) ? $value : $default;
+}
+
+function setting_set(string $key, string $value): void
+{
+    $stmt = db()->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+    $stmt->execute([':key' => $key, ':value' => $value]);
+}
+
 function app_name(): string
 {
     static $name = null;
     if ($name !== null) {
         return $name;
     }
-    $stmt = db()->prepare('SELECT value FROM settings WHERE key = :key');
-    $stmt->execute([':key' => 'site_name']);
-    $value = $stmt->fetchColumn();
-    $name = is_string($value) && $value !== '' ? $value : '私藏';
+    $value = setting_get('site_name');
+    $name = $value !== '' ? $value : '私藏';
     return $name;
+}
+
+function notice_data(): ?array
+{
+    $title = trim(setting_get('notice_title'));
+    $content = trim(setting_get('notice_content'));
+    if ($title === '' && $content === '') {
+        return null;
+    }
+    return [
+        'title' => $title !== '' ? $title : '公告',
+        'content' => $content,
+        'updated' => setting_get('notice_updated'),
+    ];
+}
+
+function notice_markup(): string
+{
+    $notice = notice_data();
+    if (!$notice) {
+        return '';
+    }
+    $title = h($notice['title']);
+    $content = nl2br(h($notice['content']));
+    return <<<HTML
+<div class="notice-mask" id="noticeMask">
+    <div class="notice-box" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
+        <h2 id="noticeTitle">{$title}</h2>
+        <div class="notice-body">{$content}</div>
+        <button type="button" class="notice-ok" id="noticeOk">知道了</button>
+    </div>
+</div>
+<script>
+(function () {
+    var mask = document.getElementById('noticeMask');
+    var ok = document.getElementById('noticeOk');
+    if (!mask || !ok) return;
+    function hide() { mask.style.display = 'none'; }
+    ok.addEventListener('click', hide);
+})();
+</script>
+HTML;
 }
 
 function h(?string $value): string

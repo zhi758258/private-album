@@ -45,5 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">进入</button>
     </form>
 </div>
+<?= notice_markup() ?>
 </body>
 </html>

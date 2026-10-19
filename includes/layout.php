@@ -65,6 +65,7 @@ function render_footer(): void
     ?>
     </main>
     <footer class="foot"></footer>
+    <?= notice_markup() ?>
     <script>
     (function () {
         var btn = document.querySelector('.menu-toggle');

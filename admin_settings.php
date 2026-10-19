@@ -15,13 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash_set('err', '网站名字不能为空。');
             redirect('/admin_settings.php');
         }
-        $stmt = db()->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value');
-        $stmt->execute([
-            ':key' => 'site_name',
-            ':value' => mb_substr($siteName, 0, 40),
-        ]);
+        setting_set('site_name', mb_substr($siteName, 0, 40));
         flash_set('ok', '网站名字已保存。');
+        redirect('/admin_settings.php');
+    }
+
+    if ($action === 'notice') {
+        $title = trim((string) ($_POST['notice_title'] ?? ''));
+        $content = trim((string) ($_POST['notice_content'] ?? ''));
+        setting_set('notice_title', mb_substr($title, 0, 80));
+        setting_set('notice_content', mb_substr($content, 0, 4000));
+        setting_set('notice_updated', now());
+        flash_set('ok', ($title === '' && $content === '') ? '公告已清空。' : '公告已保存。');
         redirect('/admin_settings.php');
     }
 
@@ -67,6 +72,15 @@ render_header('后台设置', $admin, 'admin_settings');
     <label for="site_name">网站名字</label>
     <input id="site_name" name="site_name" required maxlength="40" value="<?= h(app_name()) ?>">
     <button type="submit">保存</button>
+</form>
+<form class="panel" method="post">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="notice">
+    <label for="notice_title">公告标题</label>
+    <input id="notice_title" name="notice_title" maxlength="80" value="<?= h(setting_get('notice_title')) ?>">
+    <label for="notice_content">公告内容</label>
+    <textarea id="notice_content" name="notice_content" maxlength="4000"><?= h(setting_get('notice_content')) ?></textarea>
+    <button type="submit">保存公告</button>
 </form>
 <form class="panel" method="post">
     <?= csrf_field() ?>
