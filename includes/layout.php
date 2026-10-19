@@ -38,6 +38,7 @@ function render_header(string $title, array $user, string $active = ''): void
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
+                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php">全部相册</a>
                 <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
                 <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
                 <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php">后台设置</a>
@@ -66,6 +67,16 @@ function render_footer(): void
     </main>
     <footer class="foot"></footer>
     <?= notice_markup() ?>
+    <div class="confirm-mask" id="delete-confirm" hidden>
+        <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+            <h2 id="delete-confirm-title">确认删除</h2>
+            <p>确定删除这张照片？删除后无法恢复。</p>
+            <div class="confirm-actions">
+                <button type="button" class="btn ghost-btn" data-cancel>取消</button>
+                <button type="button" class="btn danger-btn" data-ok>确定删除</button>
+            </div>
+        </div>
+    </div>
     <script>
     (function () {
         var btn = document.querySelector('.menu-toggle');
@@ -103,6 +114,35 @@ function render_footer(): void
         }
         if (prev) prev.addEventListener('click', function () { step(-1); });
         if (next) next.addEventListener('click', function () { step(1); });
+    })();
+    (function () {
+        var box = document.getElementById('delete-confirm');
+        if (!box) return;
+        var pending = null;
+        var cancelBtn = box.querySelector('[data-cancel]');
+        var okBtn = box.querySelector('[data-ok]');
+        function close() {
+            box.hidden = true;
+            pending = null;
+        }
+        document.querySelectorAll('.js-delete-photo').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                pending = form;
+                box.hidden = false;
+            });
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', close);
+        box.addEventListener('click', function (e) {
+            if (e.target === box) close();
+        });
+        if (okBtn) okBtn.addEventListener('click', function () {
+            if (!pending) return;
+            var form = pending;
+            pending = null;
+            box.hidden = true;
+            HTMLFormElement.prototype.submit.call(form);
+        });
     })();
     </script>
 </body>

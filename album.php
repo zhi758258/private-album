@@ -9,6 +9,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = (string) ($_POST['action'] ?? 'upload');
 
+    if ($action === 'delete' && $user['role'] === 'admin') {
+        $photoId = (int) ($_POST['photo_id'] ?? 0);
+        if (delete_photo_by_id($photoId)) {
+            flash_set('ok', '已删除照片。');
+        } else {
+            flash_set('err', '照片不存在。');
+        }
+        redirect('/album.php');
+    }
+
     if ($action === 'wall' && $user['role'] === 'admin') {
         $photoId = (int) ($_POST['photo_id'] ?? 0);
         $onWall = isset($_POST['on_wall']) ? 1 : 0;
@@ -104,6 +114,12 @@ render_header('我的相册', $user, 'album');
                                 <input type="checkbox" name="on_wall" value="1" <?= !empty($photo['on_wall']) ? 'checked' : '' ?> onchange="this.form.submit()">
                                 添加到相册墙
                             </label>
+                        </form>
+                        <form method="post" class="wall-form js-delete-photo">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="photo_id" value="<?= (int) $photo['id'] ?>">
+                            <button class="btn danger-btn" type="submit">删除照片</button>
                         </form>
                     <?php endif; ?>
                 </figcaption>

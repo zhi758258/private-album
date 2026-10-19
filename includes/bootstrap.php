@@ -283,6 +283,26 @@ function redirect(string $path): void
     exit;
 }
 
+function delete_photo_by_id(int $id): bool
+{
+    $stmt = db()->prepare('SELECT id, filename FROM photos WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $photo = $stmt->fetch();
+    if (!$photo) {
+        return false;
+    }
+    $name = basename((string) $photo['filename']);
+    $path = UPLOAD_DIR . '/' . $name;
+    $realDir = realpath(UPLOAD_DIR);
+    $realFile = realpath($path);
+    if ($realDir !== false && $realFile !== false && str_starts_with($realFile, $realDir . DIRECTORY_SEPARATOR) && is_file($realFile)) {
+        unlink($realFile);
+    }
+    $del = db()->prepare('DELETE FROM photos WHERE id = :id');
+    $del->execute([':id' => $id]);
+    return true;
+}
+
 function detect_image_mime(string $path): ?string
 {
     $info = @getimagesize($path);

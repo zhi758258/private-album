@@ -4,6 +4,20 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 $user = require_login();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+    if ($user['role'] === 'admin' && ($_POST['action'] ?? '') === 'delete') {
+        $photoId = (int) ($_POST['photo_id'] ?? 0);
+        if (delete_photo_by_id($photoId)) {
+            flash_set('ok', '已删除照片。');
+        } else {
+            flash_set('err', '照片不存在。');
+        }
+        redirect('/index.php');
+    }
+}
+
 $photos = db()->query("
     SELECT photos.*, users.display_name, users.role
     FROM photos
@@ -70,6 +84,14 @@ render_header('首页', $user, 'home');
                             <span><?= h($photo['created_at']) ?></span>
                         </div>
                         <a class="btn save-btn" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">保存到相册</a>
+                        <?php if ($user['role'] === 'admin'): ?>
+                            <form method="post" class="wall-form js-delete-photo">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="photo_id" value="<?= (int) $photo['id'] ?>">
+                                <button class="btn danger-btn" type="submit">删除照片</button>
+                            </form>
+                        <?php endif; ?>
                     </figcaption>
                 </figure>
             <?php endforeach; ?>
