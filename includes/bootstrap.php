@@ -105,6 +105,11 @@ function init_schema(PDO $pdo): void
         $hasNotice = trim(setting_get('notice_content')) !== '';
         $ins->execute([':key' => 'notice_enabled', ':value' => $hasNotice ? '1' : '0']);
     }
+    $exists->execute([':key' => 'notice_once']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $ins->execute([':key' => 'notice_once', ':value' => '0']);
+    }
     $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
     $names = array_column($cols, 'name');
     if (!in_array('parent_id', $names, true)) {
@@ -180,6 +185,7 @@ function notice_data(): ?array
     return [
         'content' => $content,
         'updated' => setting_get('notice_updated'),
+        'once' => setting_get('notice_once') === '1' ? '1' : '0',
     ];
 }
 
@@ -190,8 +196,10 @@ function notice_markup(): string
         return '';
     }
     $content = nl2br(h($notice['content']));
+    $updated = h($notice['updated']);
+    $once = h($notice['once']);
     return <<<HTML
-<div class="notice-mask" id="noticeMask">
+<div class="notice-mask" id="noticeMask" hidden data-once="{$once}" data-updated="{$updated}">
     <div class="notice-box" role="dialog" aria-modal="true">
         <div class="notice-body">{$content}</div>
         <button type="button" class="notice-ok" id="noticeOk">知道了</button>
@@ -202,8 +210,43 @@ function notice_markup(): string
     var mask = document.getElementById('noticeMask');
     var ok = document.getElementById('noticeOk');
     if (!mask || !ok) return;
-    function hide() { mask.style.display = 'none'; }
-    ok.addEventListener('click', hide);
+    var once = mask.getAttribute('data-once') === '1';
+    var key = 'notice_ack_' + (mask.getAttribute('data-updated') || '');
+    function hide() {
+        mask.hidden = true;
+        document.body.classList.remove('modal-open');
+    }
+    function show() {
+        mask.hidden = false;
+        document.body.classList.add('modal-open');
+    }
+    ok.addEventListener('click', function () {
+        if (once) {
+            try { localStorage.setItem(key, '1'); } catch (e) {}
+        }
+        hide();
+    });
+    try {
+        if (once && localStorage.getItem(key) === '1') return;
+    } catch (e) {}
+    var type = 'navigate';
+    try {
+        var nav = performance.getEntriesByType('navigation')[0];
+        if (nav && nav.type) type = nav.type;
+        else if (performance.navigation) {
+            if (performance.navigation.type === 1) type = 'reload';
+            else if (performance.navigation.type === 2) type = 'back_forward';
+        }
+    } catch (e) {}
+    var isReload = type === 'reload';
+    var isEntry = false;
+    try {
+        isEntry = !sessionStorage.getItem('site_nav');
+        sessionStorage.setItem('site_nav', '1');
+    } catch (e) {
+        isEntry = true;
+    }
+    if (isReload || isEntry) show();
 })();
 </script>
 HTML;

@@ -123,6 +123,7 @@ function render_footer(): void
         var okBtn = box.querySelector('[data-ok]');
         function close() {
             box.hidden = true;
+            document.body.classList.remove('modal-open');
             pending = null;
         }
         document.querySelectorAll('.js-delete-photo').forEach(function (form) {
@@ -130,6 +131,7 @@ function render_footer(): void
                 e.preventDefault();
                 pending = form;
                 box.hidden = false;
+                document.body.classList.add('modal-open');
             });
         });
         if (cancelBtn) cancelBtn.addEventListener('click', close);

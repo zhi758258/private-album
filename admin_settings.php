@@ -27,7 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash_set('err', '开启公告时请填写内容。');
             redirect('/admin_settings.php');
         }
+        $once = isset($_POST['notice_once']) ? '1' : '0';
         setting_set('notice_enabled', $enabled);
+        setting_set('notice_once', $once);
         setting_set('notice_content', mb_substr($content, 0, 4000));
         setting_set('notice_updated', now());
         flash_set('ok', $enabled === '1' ? '公告已开启并保存。' : '公告已关闭。');
@@ -83,6 +85,10 @@ render_header('后台设置', $admin, 'admin_settings');
     <label class="check">
         <input type="checkbox" name="notice_enabled" value="1" <?= setting_get('notice_enabled') === '1' ? 'checked' : '' ?>>
         开启公告
+    </label>
+    <label class="check">
+        <input type="checkbox" name="notice_once" value="1" <?= setting_get('notice_once') === '1' ? 'checked' : '' ?>>
+        只展示一次
     </label>
     <label for="notice_content">公告内容</label>
     <textarea id="notice_content" name="notice_content" maxlength="4000"><?= h(setting_get('notice_content')) ?></textarea>
