@@ -6,7 +6,6 @@ session_start([
     'cookie_samesite' => 'Lax',
 ]);
 
-const APP_NAME = '私藏';
 const UPLOAD_DIR = __DIR__ . '/../uploads';
 const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
@@ -82,7 +81,17 @@ function init_schema(PDO $pdo): void
             updated_at TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
     ');
+    $exists = $pdo->prepare('SELECT value FROM settings WHERE key = :key');
+    $exists->execute([':key' => 'site_name']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $ins->execute([':key' => 'site_name', ':value' => '私藏']);
+    }
     $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
     $names = array_column($cols, 'name');
     if (!in_array('parent_id', $names, true)) {
@@ -108,6 +117,19 @@ function init_schema(PDO $pdo): void
 function now(): string
 {
     return date('Y-m-d H:i:s');
+}
+
+function app_name(): string
+{
+    static $name = null;
+    if ($name !== null) {
+        return $name;
+    }
+    $stmt = db()->prepare('SELECT value FROM settings WHERE key = :key');
+    $stmt->execute([':key' => 'site_name']);
+    $value = $stmt->fetchColumn();
+    $name = is_string($value) && $value !== '' ? $value : '私藏';
+    return $name;
 }
 
 function h(?string $value): string

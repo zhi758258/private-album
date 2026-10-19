@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 · <?= h(APP_NAME) ?></title>
+    <title>登录 · <?= h(app_name()) ?></title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="login-shell">
     <form class="login-card" method="post">
         <?= csrf_field() ?>
-        <h1><?= h(APP_NAME) ?></h1>
+        <h1><?= h(app_name()) ?></h1>
         <?php if ($error): ?>
             <div class="flash flash-err"><?= h($error) ?></div>
         <?php endif; ?>

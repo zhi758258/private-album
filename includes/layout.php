@@ -10,7 +10,7 @@ function render_header(string $title, array $user, string $active = ''): void
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= h($title) ?> · <?= h(APP_NAME) ?></title>
+    <title><?= h($title) ?> · <?= h(app_name()) ?></title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -18,18 +18,20 @@ function render_header(string $title, array $user, string $active = ''): void
     <header class="topbar">
         <a class="brand" href="/index.php">
             <span class="brand-mark"></span>
-            <?= h(APP_NAME) ?>
+            <?= h(app_name()) ?>
         </a>
         <nav>
             <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">相册墙</a>
             <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
             <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
-            <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
                 <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
                 <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
+                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php">后台设置</a>
+            <?php else: ?>
+                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
             <?php endif; ?>
         </nav>
         <div class="who">
