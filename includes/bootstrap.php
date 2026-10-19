@@ -104,6 +104,14 @@ function init_schema(PDO $pdo): void
     if (!in_array('parent_id', $names, true)) {
         $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INTEGER');
     }
+    $photoCols = array_column($pdo->query('PRAGMA table_info(photos)')->fetchAll(), 'name');
+    if (!in_array('on_wall', $photoCols, true)) {
+        $pdo->exec('ALTER TABLE photos ADD COLUMN on_wall INTEGER NOT NULL DEFAULT 1');
+        $pdo->exec("
+            UPDATE photos SET on_wall = 0
+            WHERE user_id IN (SELECT id FROM users WHERE role = 'admin')
+        ");
+    }
 
     $pdo->exec("UPDATE users SET display_name = '死鬼老公' WHERE username = 'admin' AND display_name = '管理员'");
 

@@ -89,6 +89,21 @@ function render_footer(): void
         closeBtn.addEventListener('click', closeMenu);
         mask.addEventListener('click', closeMenu);
     })();
+    (function () {
+        var slider = document.querySelector('[data-slider]');
+        if (!slider) return;
+        var track = slider.querySelector('.wall-track');
+        var prev = slider.querySelector('[data-prev]');
+        var next = slider.querySelector('[data-next]');
+        if (!track) return;
+        function step(dir) {
+            var card = track.querySelector('.wall-slide');
+            var width = card ? card.getBoundingClientRect().width + 16 : track.clientWidth;
+            track.scrollBy({ left: dir * width, behavior: 'smooth' });
+        }
+        if (prev) prev.addEventListener('click', function () { step(-1); });
+        if (next) next.addEventListener('click', function () { step(1); });
+    })();
     </script>
 </body>
 </html>

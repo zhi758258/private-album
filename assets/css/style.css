@@ -234,6 +234,9 @@ body.nav-open .drawer { transform: translateX(0); }
     display: block;
     width: 100%;
     height: auto;
+    -webkit-touch-callout: default;
+    -webkit-user-select: none;
+    user-select: none;
 }
 .card figcaption {
     padding: 12px 14px 14px;
@@ -242,6 +245,62 @@ body.nav-open .drawer { transform: translateX(0); }
     line-height: 1.6;
 }
 .card .meta { display: flex; justify-content: space-between; gap: 10px; }
+.save-btn {
+    margin-top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 13px;
+}
+.wall-form { margin-top: 10px; }
+.wall-form .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+.wall-form .check input {
+    width: auto;
+    margin: 0;
+}
+.wall-slider {
+    position: relative;
+    overflow: hidden;
+}
+.wall-track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    scrollbar-width: none;
+}
+.wall-track::-webkit-scrollbar { display: none; }
+.wall-slide {
+    flex: 0 0 min(520px, 100%);
+    margin-bottom: 0;
+    scroll-snap-align: start;
+}
+.wall-slide img {
+    max-height: 72vh;
+    width: 100%;
+    object-fit: contain;
+    background: #11100e;
+    -webkit-touch-callout: default;
+    pointer-events: auto;
+    user-select: none;
+}
+.wall-prev, .wall-next {
+    position: absolute;
+    top: 42%;
+    z-index: 2;
+    width: auto;
+    padding: 8px 12px;
+    opacity: 0.92;
+}
+.wall-prev { left: 8px; }
+.wall-next { right: 8px; }
 
 .panel {
     background: var(--paper);
@@ -410,8 +469,16 @@ button:hover, .btn:hover { filter: brightness(1.05); }
         text-align: center;
         padding: 12px 16px;
     }
-    .drawer-close, .menu-toggle, .drawer-logout {
+    .drawer-close, .menu-toggle, .drawer-logout, .wall-prev, .wall-next {
         width: auto;
+    }
+    .wall-slide {
+        flex-basis: 100%;
+    }
+    .wall-prev, .wall-next {
+        top: 36%;
+        padding: 8px 10px;
+        font-size: 13px;
     }
     .panel {
         overflow-x: auto;
