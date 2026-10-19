@@ -9,7 +9,7 @@ function render_header(string $title, array $user, string $active = ''): void
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= h($title) ?> · <?= h(app_name()) ?></title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
@@ -23,24 +23,6 @@ function render_header(string $title, array $user, string $active = ''): void
             <span class="brand-mark"></span>
             <?= h(app_name()) ?>
         </a>
-        <nav class="desk-nav">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">相册墙</a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
-            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
-            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
-            <?php if ($user['role'] === 'admin'): ?>
-                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
-                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
-                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
-                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php">后台设置</a>
-            <?php else: ?>
-                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
-            <?php endif; ?>
-        </nav>
-        <div class="who desk-who">
-            <span><?= h($user['display_name']) ?></span>
-            <a href="/logout.php">退出</a>
-        </div>
     </header>
     <div class="nav-mask" hidden></div>
     <aside class="drawer" aria-hidden="true">
@@ -70,7 +52,7 @@ function render_header(string $title, array $user, string $active = ''): void
                 <strong><?= h($user['display_name']) ?></strong>
                 <span><?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
             </div>
-            <a href="/logout.php">退出</a>
+            <a class="drawer-logout" href="/logout.php">退出</a>
         </div>
     </aside>
     <main class="wrap">
@@ -91,7 +73,7 @@ function render_footer(): void
         var closeBtn = document.querySelector('.drawer-close');
         var mask = document.querySelector('.nav-mask');
         var drawer = document.querySelector('.drawer');
-        if (!btn || !mask || !drawer) return;
+        if (!btn || !mask || !drawer || !closeBtn) return;
         function openMenu() {
             document.body.classList.add('nav-open');
             drawer.setAttribute('aria-hidden', 'false');
