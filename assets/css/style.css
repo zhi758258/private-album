@@ -71,7 +71,12 @@ nav a.is-active, nav a:hover {
     color: var(--ink);
     background: #2a241c;
 }
-.who { color: var(--muted); display: flex; gap: 14px; align-items: center; }
+.who { color: var(--muted); display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+.menu-toggle {
+    display: none;
+    margin-left: auto;
+    letter-spacing: 0.12em;
+}
 
 .wrap {
     position: relative;
@@ -253,9 +258,65 @@ button:hover, .btn:hover { filter: brightness(1.05); }
     font-size: 13px;
 }
 
-@media (max-width: 720px) {
-    .topbar { flex-wrap: wrap; padding: 14px 16px; }
-    nav { order: 3; width: 100%; overflow: auto; }
-    .page-head h1 { font-size: 26px; }
-    .hero h1 { font-size: 28px; }
+@media (max-width: 900px) {
+    .topbar {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        gap: 10px;
+        position: sticky;
+        top: 0;
+    }
+    .brand {
+        font-size: 18px;
+        letter-spacing: 0.12em;
+    }
+    .menu-toggle { display: inline-block; }
+    .who { width: auto; }
+    nav {
+        display: none;
+        order: 3;
+        width: 100%;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 0 4px;
+    }
+    .topbar.is-open nav { display: flex; }
+    nav a {
+        display: block;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #221c16;
+    }
+    .wrap {
+        width: calc(100% - 28px);
+        margin: 20px auto 48px;
+    }
+    .page-head { margin-bottom: 18px; }
+    .page-head h1 {
+        font-size: 24px;
+        letter-spacing: 0.04em;
+    }
+    .hero h1 { font-size: 26px; }
+    .masonry {
+        columns: 1;
+        column-gap: 0;
+    }
+    .panel { padding: 16px; }
+    .card .meta { flex-direction: column; gap: 4px; }
+    .msg.reply { margin-left: 8px; }
+    .login-card { padding: 28px 18px 22px; }
+    button, .btn {
+        width: 100%;
+        text-align: center;
+        padding: 12px 16px;
+    }
+    .table-wrap, .panel {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .table { min-width: 520px; }
+}
+
+@media (min-width: 721px) and (max-width: 1100px) {
+    .masonry { columns: 2 220px; }
 }

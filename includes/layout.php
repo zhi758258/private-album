@@ -20,6 +20,7 @@ function render_header(string $title, array $user, string $active = ''): void
             <span class="brand-mark"></span>
             <?= h(app_name()) ?>
         </a>
+        <button class="menu-toggle" type="button" aria-label="菜单" aria-expanded="false">菜单</button>
         <nav>
             <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">相册墙</a>
             <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
@@ -51,6 +52,17 @@ function render_footer(): void
     ?>
     </main>
     <footer class="foot"></footer>
+    <script>
+    (function () {
+        var bar = document.querySelector('.topbar');
+        var btn = document.querySelector('.menu-toggle');
+        if (!bar || !btn) return;
+        btn.addEventListener('click', function () {
+            var open = bar.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    })();
+    </script>
 </body>
 </html>
     <?php
