@@ -36,9 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash_set('err', '图片不能超过 8MB。');
         redirect('/album.php');
     }
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file($file['tmp_name']);
-    if (!isset(ALLOWED_MIME[$mime])) {
+    $mime = detect_image_mime($file['tmp_name']);
+    if ($mime === null) {
         flash_set('err', '只支持 jpg / png / gif / webp。');
         redirect('/album.php');
     }

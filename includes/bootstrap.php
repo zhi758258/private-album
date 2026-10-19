@@ -282,3 +282,22 @@ function redirect(string $path): void
     header('Location: ' . $path);
     exit;
 }
+
+function detect_image_mime(string $path): ?string
+{
+    $info = @getimagesize($path);
+    if (is_array($info) && !empty($info['mime'])) {
+        $mime = (string) $info['mime'];
+        return isset(ALLOWED_MIME[$mime]) ? $mime : null;
+    }
+    if (function_exists('mime_content_type')) {
+        $mime = (string) @mime_content_type($path);
+        return isset(ALLOWED_MIME[$mime]) ? $mime : null;
+    }
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $finfo->file($path);
+        return isset(ALLOWED_MIME[$mime]) ? $mime : null;
+    }
+    return null;
+}
