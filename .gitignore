@@ -110,6 +110,9 @@
 **/.env.*.local
 *.pem
 *.key
+*.sqlite
+*.sqlite3
+data/*.sqlite
 
 # Temporary files
 *.tmp
