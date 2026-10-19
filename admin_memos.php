@@ -15,7 +15,6 @@ render_header('全部备忘录', $admin, 'admin_memos');
 ?>
 <section class="page-head">
     <h1>全部备忘录</h1>
-    <p>仅管理员可查看所有成员的私有备忘。</p>
 </section>
 <?php if (!$memos): ?>
     <div class="empty">还没有人写过备忘。</div>

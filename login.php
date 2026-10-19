@@ -35,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form class="login-card" method="post">
         <?= csrf_field() ?>
         <h1><?= h(APP_NAME) ?></h1>
-        <p>内部相册与留言板，需管理员开通账号后登录。</p>
         <?php if ($error): ?>
             <div class="flash flash-err"><?= h($error) ?></div>
         <?php endif; ?>

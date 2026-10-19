@@ -25,9 +25,11 @@ function render_header(string $title, array $user, string $active = ''): void
             <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
             <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
+            <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
                 <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
+                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
             <?php endif; ?>
         </nav>
         <div class="who">
@@ -46,7 +48,7 @@ function render_footer(): void
 {
     ?>
     </main>
-    <footer class="foot">照片只增不减 · 不对外开放注册</footer>
+    <footer class="foot"></footer>
 </body>
 </html>
     <?php

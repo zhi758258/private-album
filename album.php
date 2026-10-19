@@ -62,13 +62,11 @@ render_header('我的相册', $user, 'album');
 ?>
 <section class="page-head">
     <h1>我的相册</h1>
-    <p>上传后永久保留，页面上没有删除入口。</p>
 </section>
 <form class="panel" method="post" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <label for="photo">选择图片</label>
     <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
-    <p class="hint">最大 8MB，支持 jpg / png / gif / webp。</p>
     <label for="caption">说明（可选）</label>
     <input id="caption" name="caption" maxlength="120" placeholder="写一句想留下的话">
     <button type="submit">上传到相册</button>

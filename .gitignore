@@ -113,6 +113,9 @@
 *.sqlite
 *.sqlite3
 data/*.sqlite
+wenjian123/*
+!wenjian123/.htaccess
+!wenjian123/.gitkeep
 
 # Temporary files
 *.tmp

@@ -39,7 +39,6 @@ render_header('备忘录', $user, 'memo');
 ?>
 <section class="page-head">
     <h1>备忘录</h1>
-    <p>只属于你。其他成员看不到，管理员可以查看。</p>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

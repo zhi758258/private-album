@@ -62,7 +62,6 @@ render_header('留言板', $user, 'board');
 ?>
 <section class="page-head">
     <h1>留言板</h1>
-    <p>所有成员都能看到，也能回复。</p>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

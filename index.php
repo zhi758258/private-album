@@ -15,10 +15,9 @@ render_header('相册墙', $user, 'home');
 ?>
 <section class="page-head">
     <h1>相册墙</h1>
-    <p>所有人上传的照片都会留在这里。只能上传，不能删除。</p>
 </section>
 <?php if (!$photos): ?>
-    <div class="empty">还没有照片。去「我的相册」上传第一张。</div>
+    <div class="empty">还没有照片。</div>
 <?php else: ?>
     <div class="masonry">
         <?php foreach ($photos as $photo): ?>

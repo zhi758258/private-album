@@ -9,6 +9,7 @@ session_start([
 const APP_NAME = '私藏';
 const UPLOAD_DIR = __DIR__ . '/../uploads';
 const DATA_DIR = __DIR__ . '/../data';
+const FILES_DIR = __DIR__ . '/../wenjian123';
 const DB_PATH = DATA_DIR . '/app.sqlite';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME = [
@@ -23,6 +24,9 @@ if (!is_dir(UPLOAD_DIR)) {
 }
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
+}
+if (!is_dir(FILES_DIR)) {
+    mkdir(FILES_DIR, 0755, true);
 }
 
 function db(): PDO

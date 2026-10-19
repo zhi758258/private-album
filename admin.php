@@ -50,7 +50,6 @@ render_header('用户管理', $admin, 'admin');
 ?>
 <section class="page-head">
     <h1>用户管理</h1>
-    <p>本站关闭对外注册，只能由管理员在这里添加账号。</p>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

@@ -13,10 +13,11 @@
 
 1. 网站 → 添加站点，PHP 选 `8.0` 或更高。
 2. 把本目录全部文件上传到站点根目录（如 `/www/wwwroot/你的域名/`）。
-3. 给这两个目录写权限（755 或 775，属主为 `www`）：
+3. 给这些目录写权限（755 或 775，属主为 `www`）：
    - `data/`
    - `uploads/`
-4. 在站点设置里打开 `session`，并把 PHP `upload_max_filesize`、`post_max_size` 调到至少 `8M`。
+   - `wenjian123/`
+4. 在站点设置里打开 `session`。相册要求 `upload_max_filesize`、`post_max_size` 至少 `8M`。管理员文件管理若要传大文件，把这两项以及 `max_execution_time` 调大或设为 `0`。
 5. 访问站点域名，用默认管理员账号登录，进入「用户管理」添加成员。
 
 SQLite 数据库文件会自动生成在 `data/app.sqlite`。
@@ -27,3 +28,4 @@ SQLite 数据库文件会自动生成在 `data/app.sqlite`。
 - 管理员添加用户，无注册页
 - 用户上传 jpg / png / gif / webp，最大 8MB
 - 全站没有删除照片的入口
+- 管理员可使用文件管理：上传/下载任意格式文件，保存在 `wenjian123/`
