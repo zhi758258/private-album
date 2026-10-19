@@ -105,6 +105,8 @@ function init_schema(PDO $pdo): void
         $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INTEGER');
     }
 
+    $pdo->exec("UPDATE users SET display_name = '死鬼老公' WHERE username = 'admin' AND display_name = '管理员'");
+
     $count = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
     if ($count === 0) {
         $stmt = $pdo->prepare('
@@ -114,7 +116,7 @@ function init_schema(PDO $pdo): void
         $stmt->execute([
             ':username' => 'admin',
             ':password_hash' => password_hash('admin123', PASSWORD_DEFAULT),
-            ':display_name' => '管理员',
+            ':display_name' => '死鬼老公',
             ':role' => 'admin',
             ':created_at' => now(),
         ]);
