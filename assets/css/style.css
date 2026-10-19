@@ -266,9 +266,18 @@ body.nav-open .drawer { transform: translateX(0); }
     color: var(--muted);
     font-size: 13px;
 }
-.wall-form .check input {
+.wall-form .check input,
+.panel .check input {
     width: auto;
     margin: 0;
+}
+.panel .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-size: 13px;
 }
 .wall-slider {
     position: relative;

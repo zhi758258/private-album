@@ -99,6 +99,12 @@ function init_schema(PDO $pdo): void
         $ins->execute([':key' => 'notice_content', ':value' => '']);
         $ins->execute([':key' => 'notice_updated', ':value' => '']);
     }
+    $exists->execute([':key' => 'notice_enabled']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $hasNotice = trim(setting_get('notice_content')) !== '';
+        $ins->execute([':key' => 'notice_enabled', ':value' => $hasNotice ? '1' : '0']);
+    }
     $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
     $names = array_column($cols, 'name');
     if (!in_array('parent_id', $names, true)) {
@@ -164,13 +170,14 @@ function app_name(): string
 
 function notice_data(): ?array
 {
-    $title = trim(setting_get('notice_title'));
+    if (setting_get('notice_enabled') !== '1') {
+        return null;
+    }
     $content = trim(setting_get('notice_content'));
-    if ($title === '' && $content === '') {
+    if ($content === '') {
         return null;
     }
     return [
-        'title' => $title !== '' ? $title : '公告',
         'content' => $content,
         'updated' => setting_get('notice_updated'),
     ];
@@ -182,12 +189,10 @@ function notice_markup(): string
     if (!$notice) {
         return '';
     }
-    $title = h($notice['title']);
     $content = nl2br(h($notice['content']));
     return <<<HTML
 <div class="notice-mask" id="noticeMask">
-    <div class="notice-box" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
-        <h2 id="noticeTitle">{$title}</h2>
+    <div class="notice-box" role="dialog" aria-modal="true">
         <div class="notice-body">{$content}</div>
         <button type="button" class="notice-ok" id="noticeOk">知道了</button>
     </div>

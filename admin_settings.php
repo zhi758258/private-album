@@ -21,12 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'notice') {
-        $title = trim((string) ($_POST['notice_title'] ?? ''));
+        $enabled = isset($_POST['notice_enabled']) ? '1' : '0';
         $content = trim((string) ($_POST['notice_content'] ?? ''));
-        setting_set('notice_title', mb_substr($title, 0, 80));
+        if ($enabled === '1' && $content === '') {
+            flash_set('err', '开启公告时请填写内容。');
+            redirect('/admin_settings.php');
+        }
+        setting_set('notice_enabled', $enabled);
         setting_set('notice_content', mb_substr($content, 0, 4000));
         setting_set('notice_updated', now());
-        flash_set('ok', ($title === '' && $content === '') ? '公告已清空。' : '公告已保存。');
+        flash_set('ok', $enabled === '1' ? '公告已开启并保存。' : '公告已关闭。');
         redirect('/admin_settings.php');
     }
 
@@ -76,8 +80,10 @@ render_header('后台设置', $admin, 'admin_settings');
 <form class="panel" method="post">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="notice">
-    <label for="notice_title">公告标题</label>
-    <input id="notice_title" name="notice_title" maxlength="80" value="<?= h(setting_get('notice_title')) ?>">
+    <label class="check">
+        <input type="checkbox" name="notice_enabled" value="1" <?= setting_get('notice_enabled') === '1' ? 'checked' : '' ?>>
+        开启公告
+    </label>
     <label for="notice_content">公告内容</label>
     <textarea id="notice_content" name="notice_content" maxlength="4000"><?= h(setting_get('notice_content')) ?></textarea>
     <button type="submit">保存公告</button>
