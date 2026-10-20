@@ -88,6 +88,7 @@ render_header(nav_label('album'), $user, 'album');
 ?>
 <section class="page-head">
     <h1><?= h(nav_label('album')) ?></h1>
+    <p><?= h($user['display_name']) ?> · ID #<?= (int) $user['id'] ?></p>
 </section>
 <form class="panel" method="post" enctype="multipart/form-data">
     <?= csrf_field() ?>

@@ -40,6 +40,7 @@ render_header(nav_label('settings'), $user, 'settings');
 ?>
 <section class="page-head">
     <h1><?= h(nav_label('settings')) ?></h1>
+    <p><?= h($user['display_name']) ?> · 我的 ID：#<?= (int) $user['id'] ?>（<?= $user['role'] === 'admin' ? '管理员' : '用户' ?>）</p>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

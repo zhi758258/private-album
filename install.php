@@ -162,15 +162,11 @@ function migrate_sqlite(PDO $mysql, PDO $sqlite): array
         $ins->execute([':key' => (string) $s['key'], ':value' => (string) $s['value']]);
     }
 
-    foreach ($stats as $table => $count) {
-        if ($count > 0) {
-            $mysql->exec('ALTER TABLE ' . $table . ' AUTO_INCREMENT = 1');
-        }
-    }
-    $mysql->exec('SET @max := 0');
     foreach (['users', 'photos', 'messages', 'memos', 'cards'] as $table) {
-        $mysql->exec("SET @max := (SELECT IFNULL(MAX(id), 0) + 1 FROM `{$table}`)");
-        $mysql->exec("ALTER TABLE `{$table}` AUTO_INCREMENT = @max");
+        $max = (int) $mysql->query("SELECT IFNULL(MAX(id), 0) + 1 FROM `{$table}`")->fetchColumn();
+        if ($max > 1) {
+            $mysql->exec("ALTER TABLE `{$table}` AUTO_INCREMENT = {$max}");
+        }
     }
 
     return $stats;

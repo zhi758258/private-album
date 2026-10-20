@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $stmt = db()->prepare("
-    SELECT photos.*, users.display_name, users.role,
+    SELECT photos.*, users.display_name, users.role, users.id AS user_id,
         (SELECT COUNT(*) FROM photo_likes pl WHERE pl.photo_id = photos.id) AS like_count,
         (SELECT 1 FROM photo_likes pl WHERE pl.photo_id = photos.id AND pl.user_id = :uid) AS liked
     FROM photos
@@ -93,7 +93,7 @@ render_header(nav_label('home'), $user, 'home');
                     <figcaption>
                         <div><?= h($photo['caption'] ?: '未写说明') ?></div>
                         <div class="meta">
-                            <span><?= h($photo['display_name']) ?></span>
+                            <span><?= h($photo['display_name']) ?> #<?= (int) $photo['user_id'] ?></span>
                             <span><?= h($photo['created_at']) ?></span>
                         </div>
                         <button type="button" class="btn like-btn<?= !empty($photo['liked']) ? ' is-liked' : '' ?>" data-id="<?= (int) $photo['id'] ?>">
