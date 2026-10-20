@@ -9,9 +9,11 @@ session_start([
 const UPLOAD_DIR = __DIR__ . '/../uploads';
 const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
+const AVATAR_DIR = UPLOAD_DIR . '/avatars';
 const CONFIG_FILE = DATA_DIR . '/config.php';
 const SQLITE_FILE = DATA_DIR . '/app.sqlite';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = [
     'image/jpeg' => 'jpg',
     'image/png' => 'png',
@@ -34,6 +36,9 @@ const NAV_DEFAULTS = [
 
 if (!is_dir(UPLOAD_DIR)) {
     mkdir(UPLOAD_DIR, 0755, true);
+}
+if (!is_dir(AVATAR_DIR)) {
+    mkdir(AVATAR_DIR, 0755, true);
 }
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
@@ -108,6 +113,9 @@ function init_schema(PDO $pdo): void
     if (!mysql_column_exists($pdo, 'messages', 'parent_id')) {
         $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INT UNSIGNED NULL');
         $pdo->exec('CREATE INDEX idx_messages_parent ON messages (parent_id)');
+    }
+    if (!mysql_column_exists($pdo, 'users', 'avatar')) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN avatar VARCHAR(100) NULL');
     }
     if (!mysql_column_exists($pdo, 'photos', 'on_wall')) {
         $pdo->exec('ALTER TABLE photos ADD COLUMN on_wall TINYINT UNSIGNED NOT NULL DEFAULT 1');
@@ -258,6 +266,39 @@ function h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function is_xhr(): bool
+{
+    return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+}
+
+function json_ok(string $message = ''): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => true, 'message' => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function json_fail(string $error): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => $error], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function avatar_html(?string $avatar, string $name, string $cls = 'avatar'): string
+{
+    if ($avatar !== null && $avatar !== '') {
+        $src = '/avatar.php?u=' . rawurlencode($avatar);
+        return '<img class="' . h($cls) . '" src="' . h($src) . '" alt="' . h($name) . '" loading="lazy">';
+    }
+    $ch = mb_substr(trim($name), 0, 1);
+    if ($ch === '') {
+        $ch = '?';
+    }
+    return '<span class="' . h($cls) . ' avatar-fallback">' . h($ch) . '</span>';
+}
+
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf'])) {
@@ -285,7 +326,7 @@ function current_user(): ?array
     if (empty($_SESSION['user_id'])) {
         return null;
     }
-    $stmt = db()->prepare('SELECT id, username, display_name, role FROM users WHERE id = :id');
+    $stmt = db()->prepare('SELECT id, username, display_name, role, avatar FROM users WHERE id = :id');
     $stmt->execute([':id' => $_SESSION['user_id']]);
     $user = $stmt->fetch();
     return $user ?: null;
@@ -328,6 +369,12 @@ function flash_get(): ?array
 
 function redirect(string $path): void
 {
+    if (is_xhr()) {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode(['ok' => true, 'redirect' => $path], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     header('Location: ' . $path);
     exit;
 }

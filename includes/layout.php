@@ -38,13 +38,21 @@ function render_header(string $title, array $user, string $active = ''): void
                 <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php"><?= h(nav_label('settings')) ?></a>
             <?php endif; ?>
         </nav>
+        <button class="topbar-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+            <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-top') ?>
+        </button>
     </header>
     <div class="nav-mask" hidden></div>
     <aside class="drawer" aria-hidden="true">
         <div class="drawer-head">
-            <div>
-                <div class="drawer-title"><?= h(app_name()) ?></div>
-                <div class="drawer-sub"><?= h($user['display_name']) ?></div>
+            <div class="drawer-user">
+                <button class="drawer-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-lg') ?>
+                </button>
+                <div>
+                    <div class="drawer-title"><?= h(app_name()) ?></div>
+                    <div class="drawer-sub"><?= h($user['display_name']) ?></div>
+                </div>
             </div>
             <button class="drawer-close" type="button" aria-label="关闭菜单">关闭</button>
         </div>
@@ -67,7 +75,7 @@ function render_header(string $title, array $user, string $active = ''): void
         <div class="drawer-foot">
             <div>
                 <strong><?= h($user['display_name']) ?></strong>
-                <span>#<?= (int) $user['id'] ?> · <?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
+                <span><?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
             </div>
             <a class="drawer-logout" href="/logout.php">退出</a>
         </div>
@@ -107,6 +115,32 @@ function render_footer(): void
         <button class="lightbox-nav lightbox-prev" type="button" aria-label="上一张" data-lb-prev>‹</button>
         <button class="lightbox-nav lightbox-next" type="button" aria-label="下一张" data-lb-next>›</button>
     </div>
+    <div class="crop-mask" id="avatar-crop" hidden>
+        <div class="crop-box" role="dialog" aria-modal="true" aria-label="设置头像">
+            <h2>设置头像</h2>
+            <div class="crop-stage">
+                <canvas id="crop-canvas" width="560" height="560"></canvas>
+            </div>
+            <p class="crop-tip">拖动调整位置 · 滚轮或双指缩放</p>
+            <div class="confirm-actions">
+                <button type="button" class="btn ghost-btn" id="crop-cancel">取消</button>
+                <button type="button" class="btn" id="crop-save">使用这张头像</button>
+            </div>
+        </div>
+    </div>
+    <aside class="uprog" id="upload-progress" hidden aria-live="polite">
+        <div class="uprog-label"></div>
+        <div class="uprog-bar"><div class="uprog-fill"></div></div>
+        <div class="uprog-row">
+            <span class="uprog-state">上传中…</span>
+            <span class="uprog-pct">0%</span>
+        </div>
+        <div class="uprog-row is-dim">
+            <span class="uprog-size">—</span>
+            <span class="uprog-speed">—</span>
+        </div>
+    </aside>
+    <input type="file" id="avatar-file" accept="image/jpeg,image/png" hidden>
     <script>
     (function () {
         var btn = document.querySelector('.menu-toggle');
@@ -379,6 +413,317 @@ function render_footer(): void
                 html.addEventListener('touchmove', onTouchMove, { passive: true });
                 html.addEventListener('touchend', onTouchEnd, { passive: true });
             }
+        })();
+        (function () {
+            var uprog = document.getElementById('upload-progress');
+            if (!uprog || !window.XMLHttpRequest || !window.FormData) return;
+            var fillEl = uprog.querySelector('.uprog-fill');
+            var pctEl = uprog.querySelector('.uprog-pct');
+            var speedEl = uprog.querySelector('.uprog-speed');
+            var sizeEl = uprog.querySelector('.uprog-size');
+            var labelEl = uprog.querySelector('.uprog-label');
+            var stateEl = uprog.querySelector('.uprog-state');
+            function fmtBytes(n) {
+                var units = ['B', 'KB', 'MB', 'GB'];
+                var i = 0;
+                var v = n;
+                while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+                return (i === 0 ? Math.round(v) : (Math.round(v * 10) / 10)) + ' ' + units[i];
+            }
+            function showProgress(label) {
+                var samples = [];
+                var finished = false;
+                uprog.classList.remove('is-ok', 'is-err');
+                uprog.hidden = false;
+                labelEl.textContent = label;
+                stateEl.textContent = '上传中…';
+                pctEl.textContent = '0%';
+                speedEl.textContent = '—';
+                sizeEl.textContent = '—';
+                fillEl.style.width = '0%';
+                function update(loaded, total) {
+                    if (finished) return;
+                    var now = Date.now();
+                    samples.push({ t: now, b: loaded });
+                    while (samples.length > 1 && now - samples[0].t > 1200) samples.shift();
+                    var pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+                    fillEl.style.width = pct + '%';
+                    pctEl.textContent = pct + '%';
+                    sizeEl.textContent = fmtBytes(loaded) + (total > 0 ? ' / ' + fmtBytes(total) : '');
+                    if (samples.length > 1) {
+                        var a = samples[0];
+                        var b = samples[samples.length - 1];
+                        var dt = (b.t - a.t) / 1000;
+                        if (dt > 0.2) speedEl.textContent = fmtBytes((b.b - a.b) / dt) + '/s';
+                    }
+                }
+                function done(msg) {
+                    if (finished) return;
+                    finished = true;
+                    fillEl.style.width = '100%';
+                    pctEl.textContent = '100%';
+                    stateEl.textContent = msg || '上传完成';
+                    uprog.classList.add('is-ok');
+                }
+                function fail(msg) {
+                    if (finished) return;
+                    finished = true;
+                    stateEl.textContent = msg || '上传失败';
+                    uprog.classList.add('is-err');
+                    setTimeout(function () { uprog.hidden = true; }, 2600);
+                }
+                return { update: update, done: done, fail: fail };
+            }
+            document.querySelectorAll('form[enctype="multipart/form-data"]').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    var fileInput = form.querySelector('input[type="file"]');
+                    if (fileInput && (!fileInput.files || fileInput.files.length === 0)) return;
+                    e.preventDefault();
+                    var fd = new FormData(form);
+                    var label = '正在上传';
+                    if (fileInput && fileInput.files && fileInput.files.length === 1) {
+                        label = fileInput.files[0].name || '正在上传';
+                    } else if (fileInput && fileInput.files && fileInput.files.length > 1) {
+                        label = fileInput.files.length + ' 个文件';
+                    }
+                    var prog = showProgress(label);
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', form.getAttribute('action') || window.location.href);
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.upload.addEventListener('progress', function (ev) {
+                        if (ev.lengthComputable) prog.update(ev.loaded, ev.total);
+                    });
+                    xhr.addEventListener('load', function () {
+                        var data = null;
+                        try { data = JSON.parse(xhr.responseText); } catch (err) { data = null; }
+                        if (xhr.status === 200 && data && data.ok && data.redirect) {
+                            prog.done('上传完成，正在跳转…');
+                            setTimeout(function () { window.location.href = data.redirect; }, 500);
+                        } else {
+                            prog.fail('上传失败，请重试');
+                        }
+                    });
+                    xhr.addEventListener('error', function () {
+                        prog.fail('网络错误，请重试');
+                    });
+                    xhr.send(fd);
+                });
+            });
+            var cropBox = document.getElementById('avatar-crop');
+            var fileInput = document.getElementById('avatar-file');
+            var canvas = document.getElementById('crop-canvas');
+            var saveBtn = document.getElementById('crop-save');
+            var cancelBtn = document.getElementById('crop-cancel');
+            if (!cropBox || !fileInput || !canvas || !canvas.getContext || !saveBtn || !cancelBtn || !canvas.toBlob) return;
+            var ctx = canvas.getContext('2d');
+            var STAGE = canvas.width;
+            var OUT = 320;
+            var img = null;
+            var scale = 1;
+            var ox = 0;
+            var oy = 0;
+            var pointers = {};
+            var lastDist = 0;
+            var lastMid = null;
+            var objectUrl = '';
+            function clampState() {
+                if (!img) return;
+                var minScale = Math.max(STAGE / img.width, STAGE / img.height);
+                if (scale < minScale) scale = minScale;
+                var dw = img.width * scale;
+                var dh = img.height * scale;
+                if (dw <= STAGE) ox = (STAGE - dw) / 2;
+                else ox = Math.max(STAGE - dw, Math.min(0, ox));
+                if (dh <= STAGE) oy = (STAGE - dh) / 2;
+                else oy = Math.max(STAGE - dh, Math.min(0, oy));
+            }
+            function draw() {
+                if (!img) return;
+                ctx.fillStyle = '#0d0b09';
+                ctx.fillRect(0, 0, STAGE, STAGE);
+                ctx.drawImage(img, ox, oy, img.width * scale, img.height * scale);
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, 0, STAGE, STAGE);
+                ctx.arc(STAGE / 2, STAGE / 2, STAGE / 2 - 16, 0, Math.PI * 2, true);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                ctx.fill('evenodd');
+                ctx.restore();
+                ctx.beginPath();
+                ctx.arc(STAGE / 2, STAGE / 2, STAGE / 2 - 16, 0, Math.PI * 2);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(212, 165, 116, 0.85)';
+                ctx.stroke();
+            }
+            function zoomAt(px, py, factor) {
+                if (!img) return;
+                var ix = (px - ox) / scale;
+                var iy = (py - oy) / scale;
+                scale = scale * factor;
+                clampState();
+                ox = px - ix * scale;
+                oy = py - iy * scale;
+                clampState();
+                draw();
+            }
+            function canvasPos(e) {
+                var rect = canvas.getBoundingClientRect();
+                var k = STAGE / Math.max(1, rect.width);
+                return { x: (e.clientX - rect.left) * k, y: (e.clientY - rect.top) * k };
+            }
+            function pointerList() {
+                var list = [];
+                for (var id in pointers) {
+                    if (Object.prototype.hasOwnProperty.call(pointers, id)) list.push(pointers[id]);
+                }
+                return list;
+            }
+            canvas.addEventListener('pointerdown', function (e) {
+                e.preventDefault();
+                try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+                pointers[e.pointerId] = canvasPos(e);
+                if (pointerList().length === 2) {
+                    var ps = pointerList();
+                    lastDist = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+                    lastMid = { x: (ps[0].x + ps[1].x) / 2, y: (ps[0].y + ps[1].y) / 2 };
+                }
+            });
+            canvas.addEventListener('pointermove', function (e) {
+                if (!pointers[e.pointerId] || !img) return;
+                var p = canvasPos(e);
+                var prev = pointers[e.pointerId];
+                pointers[e.pointerId] = p;
+                var ps = pointerList();
+                if (ps.length >= 2) {
+                    var dist = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+                    var mid = { x: (ps[0].x + ps[1].x) / 2, y: (ps[0].y + ps[1].y) / 2 };
+                    if (lastDist > 0 && dist > 0) zoomAt(mid.x, mid.y, dist / lastDist);
+                    if (lastMid) {
+                        ox += mid.x - lastMid.x;
+                        oy += mid.y - lastMid.y;
+                        clampState();
+                        draw();
+                    }
+                    lastDist = dist;
+                    lastMid = mid;
+                } else {
+                    ox += p.x - prev.x;
+                    oy += p.y - prev.y;
+                    clampState();
+                    draw();
+                }
+            });
+            function releasePointer(e) {
+                delete pointers[e.pointerId];
+                if (pointerList().length < 2) {
+                    lastDist = 0;
+                    lastMid = null;
+                }
+            }
+            canvas.addEventListener('pointerup', releasePointer);
+            canvas.addEventListener('pointercancel', releasePointer);
+            canvas.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                var p = canvasPos(e);
+                zoomAt(p.x, p.y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+            }, { passive: false });
+            function closeCrop() {
+                cropBox.hidden = true;
+                document.body.classList.remove('modal-open');
+                img = null;
+                saveBtn.disabled = false;
+                if (objectUrl) {
+                    URL.revokeObjectURL(objectUrl);
+                    objectUrl = '';
+                }
+            }
+            document.addEventListener('click', function (e) {
+                if (!e.target || !e.target.closest) return;
+                if (!e.target.closest('.js-avatar-edit')) return;
+                e.preventDefault();
+                fileInput.value = '';
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', function () {
+                var f = fileInput.files && fileInput.files[0];
+                if (!f) return;
+                if (f.type !== 'image/jpeg' && f.type !== 'image/png') {
+                    alert('请选择 jpg 或 png 图片。');
+                    return;
+                }
+                if (f.size > 5 * 1024 * 1024) {
+                    alert('图片不能超过 5MB。');
+                    return;
+                }
+                var im = new Image();
+                objectUrl = URL.createObjectURL(f);
+                im.onload = function () {
+                    img = im;
+                    scale = Math.max(STAGE / im.width, STAGE / im.height);
+                    ox = (STAGE - im.width * scale) / 2;
+                    oy = (STAGE - im.height * scale) / 2;
+                    cropBox.hidden = false;
+                    document.body.classList.add('modal-open');
+                    draw();
+                };
+                im.onerror = function () {
+                    alert('图片读取失败，请换一张试试。');
+                    closeCrop();
+                };
+                im.src = objectUrl;
+            });
+            cancelBtn.addEventListener('click', closeCrop);
+            cropBox.addEventListener('click', function (e) {
+                if (e.target === cropBox) closeCrop();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !cropBox.hidden) closeCrop();
+            });
+            saveBtn.addEventListener('click', function () {
+                if (!img) return;
+                saveBtn.disabled = true;
+                var out = document.createElement('canvas');
+                out.width = OUT;
+                out.height = OUT;
+                var octx = out.getContext('2d');
+                octx.fillStyle = '#0d0b09';
+                octx.fillRect(0, 0, OUT, OUT);
+                octx.drawImage(img, -ox / scale, -oy / scale, STAGE / scale, STAGE / scale, 0, 0, OUT, OUT);
+                out.toBlob(function (blob) {
+                    if (!blob) {
+                        alert('生成头像失败，请重试。');
+                        saveBtn.disabled = false;
+                        return;
+                    }
+                    var fd = new FormData();
+                    fd.append('avatar', blob, 'avatar.jpg');
+                    fd.append('csrf', csrf);
+                    var prog = showProgress('新头像');
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/avatar_upload.php');
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.upload.addEventListener('progress', function (ev) {
+                        if (ev.lengthComputable) prog.update(ev.loaded, ev.total);
+                    });
+                    xhr.addEventListener('load', function () {
+                        var data = null;
+                        try { data = JSON.parse(xhr.responseText); } catch (err) { data = null; }
+                        if (xhr.status === 200 && data && data.ok) {
+                            closeCrop();
+                            prog.done('头像已更新，正在刷新…');
+                            setTimeout(function () { window.location.reload(); }, 600);
+                        } else {
+                            prog.fail((data && data.error) || '上传失败，请重试');
+                            saveBtn.disabled = false;
+                        }
+                    });
+                    xhr.addEventListener('error', function () {
+                        prog.fail('网络错误，请重试');
+                        saveBtn.disabled = false;
+                    });
+                    xhr.send(fd);
+                }, 'image/jpeg', 0.88);
+            });
         })();
     })();
     </script>

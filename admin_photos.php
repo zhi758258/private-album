@@ -54,7 +54,7 @@ render_header(nav_label('admin_photos'), $admin, 'admin_photos');
                 <figcaption>
                     <div><?= h($photo['caption'] ?: '未写说明') ?></div>
                     <div class="meta">
-                        <span><?= h($photo['display_name']) ?> #<?= (int) $photo['user_id'] ?>（<?= h($photo['username']) ?>）</span>
+                        <span><?= h($photo['display_name']) ?>（<?= h($photo['username']) ?>）</span>
                         <span><?= h($photo['created_at']) ?></span>
                     </div>
                     <button type="button" class="btn like-btn" data-id="<?= (int) $photo['id'] ?>">

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     display_name VARCHAR(40) NOT NULL,
     role VARCHAR(10) NOT NULL DEFAULT 'user',
+    avatar VARCHAR(100) NULL,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_users_username (username)

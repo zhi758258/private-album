@@ -124,7 +124,7 @@ render_header(nav_label('admin_cards'), $admin, 'admin_cards');
                 <tr>
                     <td><code style="font-size:13px; letter-spacing:0.05em;"><?= h($card['code']) ?></code></td>
                     <td><?= $card['used_by'] ? '<span style="color:var(--muted);">已使用</span>' : '<span style="color:var(--ok);">未使用</span>' ?></td>
-                    <td><?= $card['used_by'] ? h(($card['used_name'] ?? '') . ' #' . (int) $card['used_by']) : '—' ?></td>
+                    <td><?= $card['used_by'] ? h($card['used_name'] ?? '') : '—' ?></td>
                     <td><?= h($card['created_at']) ?></td>
                     <td><?= $card['used_at'] ? h($card['used_at']) : '—' ?></td>
                     <td>

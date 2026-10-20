@@ -40,7 +40,17 @@ render_header(nav_label('settings'), $user, 'settings');
 ?>
 <section class="page-head">
     <h1><?= h(nav_label('settings')) ?></h1>
-    <p><?= h($user['display_name']) ?> · 我的 ID：#<?= (int) $user['id'] ?>（<?= $user['role'] === 'admin' ? '管理员' : '用户' ?>）</p>
+    <p><?= h($user['display_name']) ?>（<?= $user['role'] === 'admin' ? '管理员' : '用户' ?>）</p>
+</section>
+<section class="panel avatar-panel">
+    <div class="block-head"><h2>我的头像</h2></div>
+    <div class="avatar-row">
+        <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-lg') ?>
+        <div class="avatar-row-text">
+            <p>支持 jpg / png 图片（5MB 内），选图后可拖动、缩放调整位置，确认后生效。</p>
+            <button type="button" class="btn js-avatar-edit">更换头像</button>
+        </div>
+    </div>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>
