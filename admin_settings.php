@@ -36,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/admin_settings.php');
     }
 
+    if ($action === 'register') {
+        setting_set('register_open', isset($_POST['register_open']) ? '1' : '0');
+        setting_set('register_auto_card', isset($_POST['register_auto_card']) ? '1' : '0');
+        flash_set('ok', '注册设置已保存。');
+        redirect('/admin_settings.php');
+    }
+
     if ($action === 'password') {
         $current = (string) ($_POST['current_password'] ?? '');
         $new = (string) ($_POST['new_password'] ?? '');
@@ -78,6 +85,21 @@ render_header('后台设置', $admin, 'admin_settings');
     <label for="site_name">网站名字</label>
     <input id="site_name" name="site_name" required maxlength="40" value="<?= h(app_name()) ?>">
     <button type="submit">保存</button>
+</form>
+<form class="panel" method="post">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="register">
+    <label class="check">
+        <input type="checkbox" name="register_open" value="1" <?= setting_get('register_open') === '1' ? 'checked' : '' ?>>
+        开放注册
+    </label>
+    <p class="hint">开启后，访问者可通过注册页注册账号。</p>
+    <label class="check">
+        <input type="checkbox" name="register_auto_card" value="1" <?= setting_get('register_auto_card') === '1' ? 'checked' : '' ?>>
+        注册自动领取卡密
+    </label>
+    <p class="hint">开启后，新用户注册无需填写卡密，系统自动分配一张；关闭后注册必须填写有效卡密。</p>
+    <button type="submit">保存注册设置</button>
 </form>
 <form class="panel" method="post">
     <?= csrf_field() ?>

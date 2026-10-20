@@ -93,6 +93,16 @@ function init_schema(PDO $pdo): void
             FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+        CREATE TABLE IF NOT EXISTS cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            created_by INTEGER NOT NULL,
+            used_by INTEGER,
+            created_at TEXT NOT NULL,
+            used_at TEXT,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (used_by) REFERENCES users(id) ON DELETE SET NULL
+        );
     ');
     $exists = $pdo->prepare('SELECT value FROM settings WHERE key = :key');
     $exists->execute([':key' => 'site_name']);
@@ -117,6 +127,16 @@ function init_schema(PDO $pdo): void
     if ($exists->fetch() === false) {
         $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
         $ins->execute([':key' => 'notice_once', ':value' => '0']);
+    }
+    $exists->execute([':key' => 'register_open']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $ins->execute([':key' => 'register_open', ':value' => '0']);
+    }
+    $exists->execute([':key' => 'register_auto_card']);
+    if ($exists->fetch() === false) {
+        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
+        $ins->execute([':key' => 'register_auto_card', ':value' => '0']);
     }
     $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
     $names = array_column($cols, 'name');
@@ -407,4 +427,112 @@ function toggle_photo_like(int $photoId, int $userId): bool
     ');
     $ins->execute([':photo_id' => $photoId, ':user_id' => $userId, ':created_at' => now()]);
     return true;
+}
+
+function register_open(): bool
+{
+    return setting_get('register_open') === '1';
+}
+
+function register_auto_card(): bool
+{
+    return setting_get('register_auto_card') === '1';
+}
+
+function card_code(): string
+{
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $s = '';
+    for ($i = 0; $i < 16; $i++) {
+        $s .= $chars[random_int(0, strlen($chars) - 1)];
+        if (($i + 1) % 4 === 0 && $i < 15) {
+            $s .= '-';
+        }
+    }
+    return $s;
+}
+
+function cards_insert(int $adminId, int $count, string $prefix = ''): int
+{
+    $prefix = mb_strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $prefix));
+    if ($prefix !== '') {
+        $prefix = mb_substr($prefix, 0, 8) . '-';
+    }
+    $ins = db()->prepare('
+        INSERT INTO cards (code, created_by, created_at)
+        VALUES (:code, :created_by, :created_at)
+    ');
+    $now = now();
+    $added = 0;
+    $attempts = 0;
+    $existsStmt = db()->prepare('SELECT 1 FROM cards WHERE code = :code');
+    while ($added < $count && $attempts < $count * 20 + 20) {
+        $attempts++;
+        $code = $prefix . card_code();
+        $existsStmt->execute([':code' => $code]);
+        if ($existsStmt->fetch()) {
+            continue;
+        }
+        $ins->execute([':code' => $code, ':created_by' => $adminId, ':created_at' => $now]);
+        $added++;
+    }
+    return $added;
+}
+
+function card_find(string $code): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM cards WHERE code = :code');
+    $stmt->execute([':code' => trim($code)]);
+    $card = $stmt->fetch();
+    return is_array($card) ? $card : null;
+}
+
+function card_available(string $code): bool
+{
+    $card = card_find($code);
+    return $card !== null && empty($card['used_by']);
+}
+
+function card_consume(string $code, int $userId): bool
+{
+    if (!card_available($code)) {
+        return false;
+    }
+    $stmt = db()->prepare('
+        UPDATE cards SET used_by = :used_by, used_at = :used_at
+        WHERE code = :code AND used_by IS NULL
+    ');
+    $stmt->execute([
+        ':used_by' => $userId,
+        ':used_at' => now(),
+        ':code' => trim($code),
+    ]);
+    return $stmt->rowCount() > 0;
+}
+
+function card_issue_auto(int $userId): string
+{
+    $prefix = 'AUTO-';
+    $existsStmt = db()->prepare('SELECT 1 FROM cards WHERE code = :code');
+    $ins = db()->prepare('
+        INSERT INTO cards (code, created_by, used_by, created_at, used_at)
+        VALUES (:code, :created_by, :used_by, :created_at, :used_at)
+    ');
+    $now = now();
+    for ($i = 0; $i < 50; $i++) {
+        $code = $prefix . card_code();
+        $existsStmt->execute([':code' => $code]);
+        if ($existsStmt->fetch()) {
+            continue;
+        }
+        $ins->execute([
+            ':code' => $code,
+            ':created_by' => $userId,
+            ':used_by' => $userId,
+            ':created_at' => $now,
+            ':used_at' => $now,
+        ]);
+        return $code;
+    }
+    return '';
 }

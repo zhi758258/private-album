@@ -29,6 +29,7 @@ function render_header(string $title, array $user, string $active = ''): void
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
+                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php">卡密管理</a>
                 <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php">全部相册</a>
                 <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
                 <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
@@ -54,6 +55,7 @@ function render_header(string $title, array $user, string $active = ''): void
             <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
             <?php if ($user['role'] === 'admin'): ?>
                 <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
+                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php">卡密管理</a>
                 <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php">全部相册</a>
                 <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
                 <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>

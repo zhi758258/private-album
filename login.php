@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = (int) $found['id'];
         redirect('/index.php');
     }
-    $error = '账号或密码不正确。本站不对外开放注册。';
+    $error = '账号或密码不正确。';
 }
 ?>
 <!DOCTYPE html>
@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form class="login-card" method="post">
         <?= csrf_field() ?>
         <h1><?= h(app_name()) ?></h1>
+        <?php $flash = flash_get(); ?>
+        <?php if ($flash): ?>
+            <div class="flash flash-<?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
+        <?php endif; ?>
         <?php if ($error): ?>
             <div class="flash flash-err"><?= h($error) ?></div>
         <?php endif; ?>
@@ -43,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="password">密码</label>
         <input id="password" name="password" type="password" required autocomplete="current-password">
         <button type="submit">进入</button>
+        <?php if (register_open()): ?>
+            <p class="back-home"><a href="/register.php">还没有账号？注册一个</a></p>
+        <?php endif; ?>
     </form>
 </div>
 <?= notice_markup() ?>
