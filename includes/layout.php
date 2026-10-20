@@ -4,6 +4,48 @@ declare(strict_types=1);
 function render_header(string $title, array $user, string $active = ''): void
 {
     $flash = flash_get();
+    $isAdmin = $user['role'] === 'admin';
+
+    $navIcons = [
+        'home' => '<path d="M3 12 12 4l9 8M5 11v9h14v-9"/>',
+        'board' => '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8M8 13h5"/>',
+        'album' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
+        'memo' => '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+        'admin' => '<path d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M16 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M14.5 20a5.5 5.5 0 0 1 6.5-5.2"/>',
+        'admin_cards' => '<path d="M4 5h16v14H4z"/><path d="M4 9h16M4 15h16"/>',
+        'admin_photos' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
+        'admin_memos' => '<path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/>',
+        'files' => '<path d="M4 5h5l2 2h9v12H4z"/><path d="M4 9h16"/>',
+        'admin_settings' => '<path d="M4 8h7M4 14h16"/><circle cx="14" cy="8" r="2"/><circle cx="9" cy="14" r="2"/>',
+        'settings' => '<path d="M4 8h7M4 14h16"/><circle cx="14" cy="8" r="2"/><circle cx="9" cy="14" r="2"/>',
+    ];
+    $baseNav = [
+        ['key' => 'home', 'href' => '/index.php'],
+        ['key' => 'board', 'href' => '/board.php'],
+        ['key' => 'album', 'href' => '/album.php'],
+        ['key' => 'memo', 'href' => '/memo.php'],
+    ];
+    $adminNav = [
+        ['key' => 'admin', 'href' => '/admin.php'],
+        ['key' => 'admin_cards', 'href' => '/admin_cards.php'],
+        ['key' => 'admin_photos', 'href' => '/admin_photos.php'],
+        ['key' => 'admin_memos', 'href' => '/admin_memos.php'],
+        ['key' => 'files', 'href' => '/files.php'],
+        ['key' => 'admin_settings', 'href' => '/admin_settings.php'],
+    ];
+    $userNav = [['key' => 'settings', 'href' => '/settings.php']];
+    $navItems = $isAdmin ? array_merge($baseNav, $adminNav) : array_merge($baseNav, $userNav);
+
+    $themes = [
+        'light-blue' => ['name' => '晴空蓝', 'gradient' => 'linear-gradient(135deg,#2563eb,#0f766e)'],
+        'dark-blue' => ['name' => '深海蓝', 'gradient' => 'linear-gradient(135deg,#60a5fa,#2dd4bf)'],
+        'light-pink' => ['name' => '樱花粉', 'gradient' => 'linear-gradient(135deg,#f472b6,#ec4899)'],
+        'light-green' => ['name' => '清新绿', 'gradient' => 'linear-gradient(135deg,#4ade80,#22c55e)'],
+        'dark-purple' => ['name' => '紫罗兰', 'gradient' => 'linear-gradient(135deg,#c084fc,#a855f7)'],
+        'dark-orange' => ['name' => '暖阳橙', 'gradient' => 'linear-gradient(135deg,#fbbf24,#f59e0b)'],
+        'dark-teal' => ['name' => '青空青', 'gradient' => 'linear-gradient(135deg,#22d3ee,#06b6d4)'],
+        'dark-red' => ['name' => '绯红夜', 'gradient' => 'linear-gradient(135deg,#fb7185,#f43f5e)'],
+    ];
     ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -16,74 +58,75 @@ function render_header(string $title, array $user, string $active = ''): void
 </head>
 <body>
     <div class="grain"></div>
-    <header class="topbar">
-        <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false">菜单</button>
-        <a class="brand" href="/index.php">
-            <span class="brand-mark"></span>
-            <?= h(app_name()) ?>
-        </a>
-        <nav class="topnav" aria-label="主导航">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php"><?= h(nav_label('home')) ?></a>
-            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php"><?= h(nav_label('board')) ?></a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php"><?= h(nav_label('album')) ?></a>
-            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php"><?= h(nav_label('memo')) ?></a>
-            <?php if ($user['role'] === 'admin'): ?>
-                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php"><?= h(nav_label('admin')) ?></a>
-                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php"><?= h(nav_label('admin_cards')) ?></a>
-                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php"><?= h(nav_label('admin_photos')) ?></a>
-                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php"><?= h(nav_label('admin_memos')) ?></a>
-                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php"><?= h(nav_label('files')) ?></a>
-                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php"><?= h(nav_label('admin_settings')) ?></a>
-            <?php else: ?>
-                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php"><?= h(nav_label('settings')) ?></a>
-            <?php endif; ?>
-        </nav>
-        <button class="topbar-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
-            <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-top') ?>
-        </button>
-    </header>
-    <div class="nav-mask" hidden></div>
-    <aside class="drawer" aria-hidden="true">
-        <div class="drawer-head">
-            <div class="drawer-user">
-                <button class="drawer-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
-                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-lg') ?>
+    <div class="app-shell">
+        <div class="nav-mask" hidden></div>
+        <aside class="drawer" aria-hidden="true">
+            <div class="drawer-head">
+                <div class="drawer-user">
+                    <button class="drawer-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+                        <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-lg') ?>
+                    </button>
+                    <div class="drawer-user-text">
+                        <div class="drawer-title"><?= h(app_name()) ?></div>
+                        <div class="drawer-sub"><?= h($user['display_name']) ?></div>
+                    </div>
+                </div>
+                <button class="drawer-close" type="button" aria-label="关闭菜单">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
-                <div>
-                    <div class="drawer-title"><?= h(app_name()) ?></div>
-                    <div class="drawer-sub"><?= h($user['display_name']) ?></div>
+            </div>
+            <div class="sidebar-divider"></div>
+            <nav class="drawer-nav" aria-label="主导航">
+                <?php foreach ($navItems as $it):
+                    $k = $it['key']; ?>
+                    <a class="nav-item <?= $active === $k ? 'is-active' : '' ?>" href="<?= h($it['href']) ?>">
+                        <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><?= $navIcons[$k] ?? '' ?></svg>
+                        <span class="nav-label"><?= h(nav_label($k)) ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+            <div class="sidebar-user">
+                <button class="sidebar-user-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar') ?>
+                </button>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name"><?= h($user['display_name']) ?></div>
+                    <div class="sidebar-user-role"><?= $isAdmin ? '管理员' : '用户' ?></div>
+                </div>
+                <a class="sidebar-logout" href="/logout.php" title="退出登录" aria-label="退出登录">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M14 5h5v14h-5M10 12h9M13 9l3 3-3 3"/></svg>
+                </a>
+            </div>
+            <div class="sidebar-foot">
+                <button class="theme-toggle" type="button" aria-label="切换主题" title="主题设置">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M12 7v10M7 12h10"/></svg>
+                </button>
+                <div class="theme-panel" id="theme-panel" hidden>
+                    <?php foreach ($themes as $tk => $t): ?>
+                        <button class="theme-chip" type="button" data-theme="<?= h($tk) ?>" style="--chip-bg:<?= $t['gradient'] ?>">
+                            <span class="theme-chip-name"><?= h($t['name']) ?></span>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
             </div>
-            <button class="drawer-close" type="button" aria-label="关闭菜单">关闭</button>
-        </div>
-        <nav class="drawer-nav">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php"><?= h(nav_label('home')) ?></a>
-            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php"><?= h(nav_label('board')) ?></a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php"><?= h(nav_label('album')) ?></a>
-            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php"><?= h(nav_label('memo')) ?></a>
-            <?php if ($user['role'] === 'admin'): ?>
-                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php"><?= h(nav_label('admin')) ?></a>
-                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php"><?= h(nav_label('admin_cards')) ?></a>
-                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php"><?= h(nav_label('admin_photos')) ?></a>
-                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php"><?= h(nav_label('admin_memos')) ?></a>
-                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php"><?= h(nav_label('files')) ?></a>
-                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php"><?= h(nav_label('admin_settings')) ?></a>
-            <?php else: ?>
-                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php"><?= h(nav_label('settings')) ?></a>
-            <?php endif; ?>
-        </nav>
-        <div class="drawer-foot">
-            <div>
-                <strong><?= h($user['display_name']) ?></strong>
-                <span><?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
-            </div>
-            <a class="drawer-logout" href="/logout.php">退出</a>
-        </div>
-    </aside>
-    <main class="wrap" id="page">
-        <?php if ($flash): ?>
-            <div class="flash flash-<?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
-        <?php endif; ?>
+        </aside>
+        <div class="main-col">
+            <header class="topbar">
+                <button class="menu-toggle" type="button" aria-label="打开菜单" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                </button>
+                <a class="brand" href="/index.php">
+                    <span class="brand-mark"></span>
+                    <span class="brand-name"><?= h(app_name()) ?></span>
+                </a>
+                <button class="topbar-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-top') ?>
+                </button>
+            </header>
+            <main class="wrap" id="page">
+                <?php if ($flash): ?>
+                    <div class="flash flash-<?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
+                <?php endif; ?>
     <?php
 }
 
@@ -91,6 +134,8 @@ function render_footer(): void
 {
     ?>
     </main>
+        </div>
+    </div>
     <footer class="foot"></footer>
     <?= notice_markup() ?>
     <div class="confirm-mask" id="delete-confirm" hidden>
@@ -725,6 +770,51 @@ function render_footer(): void
                 }, 'image/jpeg', 0.88);
             });
         })();
+    })();
+    (function () {
+        var themes = {
+            'light-blue': { dark: false, bg: '#f6f8fb', text: '#172033', primary: '#2563eb', secondary: '#0f766e', gradient: 'linear-gradient(135deg,#2563eb 0%,#0f766e 100%)' },
+            'dark-blue': { dark: true, bg: '#0b1020', text: '#e5e7eb', primary: '#60a5fa', secondary: '#2dd4bf', gradient: 'linear-gradient(135deg,#60a5fa 0%,#2dd4bf 100%)' },
+            'light-pink': { dark: false, bg: '#fff0f5', text: '#831843', primary: '#ec4899', secondary: '#be185d', gradient: 'linear-gradient(135deg,#f472b6 0%,#ec4899 100%)' },
+            'light-green': { dark: false, bg: '#f0fdf4', text: '#14532d', primary: '#22c55e', secondary: '#16a34a', gradient: 'linear-gradient(135deg,#4ade80 0%,#22c55e 100%)' },
+            'dark-purple': { dark: true, bg: '#1e1b4b', text: '#e9d5ff', primary: '#a855f7', secondary: '#9333ea', gradient: 'linear-gradient(135deg,#c084fc 0%,#a855f7 100%)' },
+            'dark-orange': { dark: true, bg: '#292524', text: '#fef3c7', primary: '#f59e0b', secondary: '#d97706', gradient: 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%)' },
+            'dark-teal': { dark: true, bg: '#134e4a', text: '#ccfbf1', primary: '#06b6d4', secondary: '#0891b2', gradient: 'linear-gradient(135deg,#22d3ee 0%,#06b6d4 100%)' },
+            'dark-red': { dark: true, bg: '#18181b', text: '#fda4af', primary: '#f43f5e', secondary: '#e11d48', gradient: 'linear-gradient(135deg,#fb7185 0%,#f43f5e 100%)' }
+        };
+        function applyTheme(t) {
+            var c = themes[t];
+            if (!c) return;
+            var r = document.documentElement.style;
+            r.setProperty('--theme-bg', c.bg);
+            r.setProperty('--theme-text', c.text);
+            r.setProperty('--theme-primary', c.primary);
+            r.setProperty('--theme-secondary', c.secondary);
+            r.setProperty('--theme-gradient', c.gradient);
+            document.documentElement.classList.toggle('dark', !!c.dark);
+            try { localStorage.setItem('ui_theme', t); } catch (e) {}
+            document.querySelectorAll('.theme-chip').forEach(function (b) {
+                b.classList.toggle('is-current', b.getAttribute('data-theme') === t);
+            });
+        }
+        var saved = 'light-blue';
+        try { saved = localStorage.getItem('ui_theme') || saved; } catch (e) {}
+        if (!themes[saved]) saved = 'light-blue';
+        applyTheme(saved);
+        var toggle = document.querySelector('.theme-toggle');
+        var panel = document.getElementById('theme-panel');
+        if (toggle && panel) {
+            toggle.addEventListener('click', function (e) { e.stopPropagation(); panel.hidden = !panel.hidden; });
+            document.addEventListener('click', function (e) {
+                if (!panel.hidden && !panel.contains(e.target) && e.target !== toggle) panel.hidden = true;
+            });
+        }
+        document.querySelectorAll('.theme-chip').forEach(function (b) {
+            b.addEventListener('click', function () {
+                applyTheme(b.getAttribute('data-theme'));
+                if (panel) panel.hidden = true;
+            });
+        });
     })();
     </script>
 </body>
