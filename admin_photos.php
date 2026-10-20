@@ -30,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $photos = db()->query('
-    SELECT photos.*, users.display_name, users.username, users.role
+    SELECT photos.*, users.display_name, users.username, users.role,
+        (SELECT COUNT(*) FROM photo_likes pl WHERE pl.photo_id = photos.id) AS like_count
     FROM photos
     JOIN users ON users.id = photos.user_id
     ORDER BY photos.id DESC
@@ -47,13 +48,20 @@ render_header('全部相册', $admin, 'admin_photos');
     <div class="masonry">
         <?php foreach ($photos as $photo): ?>
             <figure class="card">
-                <img src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>">
+                <a class="thumb-link" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" data-lightbox data-caption="<?= h($photo['caption'] ?: '未写说明') ?>" data-dl="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">
+                    <img src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>" loading="lazy">
+                </a>
                 <figcaption>
                     <div><?= h($photo['caption'] ?: '未写说明') ?></div>
                     <div class="meta">
                         <span><?= h($photo['display_name']) ?>（<?= h($photo['username']) ?>）</span>
                         <span><?= h($photo['created_at']) ?></span>
                     </div>
+                    <button type="button" class="btn like-btn" data-id="<?= (int) $photo['id'] ?>">
+                        <span class="heart">♥</span>
+                        <span class="cnt"><?= (int) $photo['like_count'] ?></span>
+                        <span class="lbl">喜欢</span>
+                    </button>
                     <a class="btn save-btn" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">保存到相册</a>
                     <form method="post" class="wall-form">
                         <?= csrf_field() ?>

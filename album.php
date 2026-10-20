@@ -76,9 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $stmt = db()->prepare('
-    SELECT * FROM photos WHERE user_id = :user_id ORDER BY id DESC
+    SELECT photos.*,
+        (SELECT COUNT(*) FROM photo_likes pl WHERE pl.photo_id = photos.id) AS like_count,
+        (SELECT 1 FROM photo_likes pl WHERE pl.photo_id = photos.id AND pl.user_id = :uid) AS liked
+    FROM photos WHERE user_id = :user_id ORDER BY id DESC
 ');
-$stmt->execute([':user_id' => $user['id']]);
+$stmt->execute([':user_id' => $user['id'], ':uid' => $user['id']]);
 $photos = $stmt->fetchAll();
 
 render_header('我的相册', $user, 'album');
@@ -100,10 +103,17 @@ render_header('我的相册', $user, 'album');
     <div class="masonry">
         <?php foreach ($photos as $photo): ?>
             <figure class="card">
-                <img src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>">
+                <a class="thumb-link" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" data-lightbox data-caption="<?= h($photo['caption'] ?: '未写说明') ?>" data-dl="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">
+                    <img src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>" loading="lazy">
+                </a>
                 <figcaption>
                     <div><?= h($photo['caption'] ?: '未写说明') ?></div>
                     <div class="meta"><span><?= h($photo['created_at']) ?></span></div>
+                    <button type="button" class="btn like-btn<?= !empty($photo['liked']) ? ' is-liked' : '' ?>" data-id="<?= (int) $photo['id'] ?>">
+                        <span class="heart">♥</span>
+                        <span class="cnt"><?= (int) $photo['like_count'] ?></span>
+                        <span class="lbl"><?= !empty($photo['liked']) ? '已喜欢' : '喜欢' ?></span>
+                    </button>
                     <a class="btn save-btn" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">保存到相册</a>
                     <?php if ($user['role'] === 'admin'): ?>
                         <form method="post" class="wall-form">

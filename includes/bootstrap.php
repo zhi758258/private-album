@@ -85,6 +85,14 @@ function init_schema(PDO $pdo): void
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS photo_likes (
+            photo_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (photo_id, user_id),
+            FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     ');
     $exists = $pdo->prepare('SELECT value FROM settings WHERE key = :key');
     $exists->execute([':key' => 'site_name']);
@@ -368,4 +376,35 @@ function detect_image_mime(string $path): ?string
         return isset(ALLOWED_MIME[$mime]) ? $mime : null;
     }
     return null;
+}
+
+function photo_like_count(int $photoId): int
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM photo_likes WHERE photo_id = :photo_id');
+    $stmt->execute([':photo_id' => $photoId]);
+    return (int) $stmt->fetchColumn();
+}
+
+function photo_liked_by(int $photoId, int $userId): bool
+{
+    $stmt = db()->prepare('SELECT 1 FROM photo_likes WHERE photo_id = :photo_id AND user_id = :user_id');
+    $stmt->execute([':photo_id' => $photoId, ':user_id' => $userId]);
+    return $stmt->fetch() !== false;
+}
+
+function toggle_photo_like(int $photoId, int $userId): bool
+{
+    $stmt = db()->prepare('SELECT 1 FROM photo_likes WHERE photo_id = :photo_id AND user_id = :user_id');
+    $stmt->execute([':photo_id' => $photoId, ':user_id' => $userId]);
+    if ($stmt->fetch()) {
+        $del = db()->prepare('DELETE FROM photo_likes WHERE photo_id = :photo_id AND user_id = :user_id');
+        $del->execute([':photo_id' => $photoId, ':user_id' => $userId]);
+        return false;
+    }
+    $ins = db()->prepare('
+        INSERT INTO photo_likes (photo_id, user_id, created_at)
+        VALUES (:photo_id, :user_id, :created_at)
+    ');
+    $ins->execute([':photo_id' => $photoId, ':user_id' => $userId, ':created_at' => now()]);
+    return true;
 }

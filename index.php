@@ -18,13 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$photos = db()->query("
-    SELECT photos.*, users.display_name, users.role
+$stmt = db()->prepare("
+    SELECT photos.*, users.display_name, users.role,
+        (SELECT COUNT(*) FROM photo_likes pl WHERE pl.photo_id = photos.id) AS like_count,
+        (SELECT 1 FROM photo_likes pl WHERE pl.photo_id = photos.id AND pl.user_id = :uid) AS liked
     FROM photos
     JOIN users ON users.id = photos.user_id
     WHERE photos.on_wall = 1
     ORDER BY photos.id DESC
-")->fetchAll();
+");
+$stmt->execute([':uid' => $user['id']]);
+$photos = $stmt->fetchAll();
 
 $rows = db()->query('
     SELECT messages.*, users.display_name
@@ -66,23 +70,37 @@ render_header('首页', $user, 'home');
     <?php endforeach; ?>
 <?php endif; ?>
 
-<section class="page-head album-head">
-    <h1>相册墙</h1>
-</section>
 <?php if (!$photos): ?>
     <div class="empty">还没有照片。</div>
 <?php else: ?>
+    <section class="block-head album-head">
+        <h2>相册墙</h2>
+        <div class="view-bar" data-viewbar data-target="wall-track">
+            <div class="seg" role="group" aria-label="显示方式">
+                <button type="button" data-mode="slide" class="is-on on">滑动</button>
+                <button type="button" data-mode="grid">平铺</button>
+            </div>
+            <button type="button" class="btn ghost-btn" data-order>排序·<span data-label>最新在前</span></button>
+        </div>
+    </section>
     <div class="wall-slider" data-slider>
-        <div class="wall-track">
+        <div class="wall-track" id="wall-track" data-mode="slide" data-order="desc">
             <?php foreach ($photos as $photo): ?>
                 <figure class="card wall-slide">
-                    <img src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>">
+                    <a class="thumb-link" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" data-lightbox data-caption="<?= h($photo['caption'] ?: '未写说明') ?>" data-dl="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">
+                        <img class="thumb-img" src="/photo.php?f=<?= rawurlencode($photo['filename']) ?>" alt="<?= h($photo['caption'] ?: $photo['original_name']) ?>" loading="lazy">
+                    </a>
                     <figcaption>
                         <div><?= h($photo['caption'] ?: '未写说明') ?></div>
                         <div class="meta">
                             <span><?= h($photo['display_name']) ?></span>
                             <span><?= h($photo['created_at']) ?></span>
                         </div>
+                        <button type="button" class="btn like-btn<?= !empty($photo['liked']) ? ' is-liked' : '' ?>" data-id="<?= (int) $photo['id'] ?>">
+                            <span class="heart">♥</span>
+                            <span class="cnt"><?= (int) $photo['like_count'] ?></span>
+                            <span class="lbl"><?= !empty($photo['liked']) ? '已喜欢' : '喜欢' ?></span>
+                        </button>
                         <a class="btn save-btn" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">保存到相册</a>
                         <?php if ($user['role'] === 'admin'): ?>
                             <form method="post" class="wall-form js-delete-photo">
