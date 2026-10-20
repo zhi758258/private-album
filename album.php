@@ -84,10 +84,10 @@ $stmt = db()->prepare('
 $stmt->execute([':user_id' => $user['id'], ':uid' => $user['id']]);
 $photos = $stmt->fetchAll();
 
-render_header('我的相册', $user, 'album');
+render_header(nav_label('album'), $user, 'album');
 ?>
 <section class="page-head">
-    <h1>我的相册</h1>
+    <h1><?= h(nav_label('album')) ?></h1>
 </section>
 <form class="panel" method="post" enctype="multipart/form-data">
     <?= csrf_field() ?>

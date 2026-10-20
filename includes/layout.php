@@ -23,19 +23,19 @@ function render_header(string $title, array $user, string $active = ''): void
             <?= h(app_name()) ?>
         </a>
         <nav class="topnav" aria-label="主导航">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">首页</a>
-            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
-            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
+            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php"><?= h(nav_label('home')) ?></a>
+            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php"><?= h(nav_label('board')) ?></a>
+            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php"><?= h(nav_label('album')) ?></a>
+            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php"><?= h(nav_label('memo')) ?></a>
             <?php if ($user['role'] === 'admin'): ?>
-                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
-                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php">卡密管理</a>
-                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php">全部相册</a>
-                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
-                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
-                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php">后台设置</a>
+                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php"><?= h(nav_label('admin')) ?></a>
+                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php"><?= h(nav_label('admin_cards')) ?></a>
+                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php"><?= h(nav_label('admin_photos')) ?></a>
+                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php"><?= h(nav_label('admin_memos')) ?></a>
+                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php"><?= h(nav_label('files')) ?></a>
+                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php"><?= h(nav_label('admin_settings')) ?></a>
             <?php else: ?>
-                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
+                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php"><?= h(nav_label('settings')) ?></a>
             <?php endif; ?>
         </nav>
     </header>
@@ -49,25 +49,25 @@ function render_header(string $title, array $user, string $active = ''): void
             <button class="drawer-close" type="button" aria-label="关闭菜单">关闭</button>
         </div>
         <nav class="drawer-nav">
-            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php">首页</a>
-            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php">留言板</a>
-            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php">我的相册</a>
-            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php">备忘录</a>
+            <a class="<?= $active === 'home' ? 'is-active' : '' ?>" href="/index.php"><?= h(nav_label('home')) ?></a>
+            <a class="<?= $active === 'board' ? 'is-active' : '' ?>" href="/board.php"><?= h(nav_label('board')) ?></a>
+            <a class="<?= $active === 'album' ? 'is-active' : '' ?>" href="/album.php"><?= h(nav_label('album')) ?></a>
+            <a class="<?= $active === 'memo' ? 'is-active' : '' ?>" href="/memo.php"><?= h(nav_label('memo')) ?></a>
             <?php if ($user['role'] === 'admin'): ?>
-                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php">用户管理</a>
-                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php">卡密管理</a>
-                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php">全部相册</a>
-                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php">全部备忘录</a>
-                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php">文件管理</a>
-                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php">后台设置</a>
+                <a class="<?= $active === 'admin' ? 'is-active' : '' ?>" href="/admin.php"><?= h(nav_label('admin')) ?></a>
+                <a class="<?= $active === 'admin_cards' ? 'is-active' : '' ?>" href="/admin_cards.php"><?= h(nav_label('admin_cards')) ?></a>
+                <a class="<?= $active === 'admin_photos' ? 'is-active' : '' ?>" href="/admin_photos.php"><?= h(nav_label('admin_photos')) ?></a>
+                <a class="<?= $active === 'admin_memos' ? 'is-active' : '' ?>" href="/admin_memos.php"><?= h(nav_label('admin_memos')) ?></a>
+                <a class="<?= $active === 'files' ? 'is-active' : '' ?>" href="/files.php"><?= h(nav_label('files')) ?></a>
+                <a class="<?= $active === 'admin_settings' ? 'is-active' : '' ?>" href="/admin_settings.php"><?= h(nav_label('admin_settings')) ?></a>
             <?php else: ?>
-                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php">设置</a>
+                <a class="<?= $active === 'settings' ? 'is-active' : '' ?>" href="/settings.php"><?= h(nav_label('settings')) ?></a>
             <?php endif; ?>
         </nav>
         <div class="drawer-foot">
             <div>
                 <strong><?= h($user['display_name']) ?></strong>
-                <span><?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
+                <span>#<?= (int) $user['id'] ?> · <?= $user['role'] === 'admin' ? '管理员' : '用户' ?></span>
             </div>
             <a class="drawer-logout" href="/logout.php">退出</a>
         </div>

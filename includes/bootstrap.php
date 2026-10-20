@@ -9,13 +9,27 @@ session_start([
 const UPLOAD_DIR = __DIR__ . '/../uploads';
 const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
-const DB_PATH = DATA_DIR . '/app.sqlite';
+const CONFIG_FILE = DATA_DIR . '/config.php';
+const SQLITE_FILE = DATA_DIR . '/app.sqlite';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME = [
     'image/jpeg' => 'jpg',
     'image/png' => 'png',
     'image/gif' => 'gif',
     'image/webp' => 'webp',
+];
+const NAV_DEFAULTS = [
+    'home' => '首页',
+    'board' => '留言板',
+    'album' => '我的相册',
+    'memo' => '备忘录',
+    'settings' => '设置',
+    'admin' => '用户管理',
+    'admin_cards' => '卡密管理',
+    'admin_photos' => '全部相册',
+    'admin_memos' => '全部备忘录',
+    'files' => '文件管理',
+    'admin_settings' => '后台设置',
 ];
 
 if (!is_dir(UPLOAD_DIR)) {
@@ -28,124 +42,76 @@ if (!is_dir(FILES_DIR)) {
     mkdir(FILES_DIR, 0755, true);
 }
 
+function db_config(): array
+{
+    static $config = null;
+    if (is_array($config)) {
+        return $config;
+    }
+    if (!is_file(CONFIG_FILE)) {
+        http_response_code(503);
+        exit('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>尚未安装</title></head>'
+            . '<body style="font-family:sans-serif; background:#14110e; color:#f3eadb; display:grid; place-items:center; min-height:100vh; margin:0;">'
+            . '<div style="max-width:520px; padding:40px; text-align:center; border:1px solid #3a3228; border-radius:14px; background:#1d1914;">'
+            . '<h1 style="margin:0 0 12px; font-weight:500;">还没有配置数据库</h1>'
+            . '<p style="color:#b9a894; line-height:1.8;">请先访问 <a href="/install.php" style="color:#d4a574;">安装向导</a> 完成数据库配置，'
+            . '或参考根目录 config.example.php 手动创建 data/config.php。</p>'
+            . '</div></body></html>');
+    }
+    $config = require CONFIG_FILE;
+    foreach (['host', 'port', 'name', 'user', 'pass'] as $field) {
+        if (!array_key_exists($field, $config)) {
+            http_response_code(500);
+            exit('data/config.php 配置不完整，缺少 ' . $field . '，请重新运行安装向导。');
+        }
+    }
+    return $config;
+}
+
 function db(): PDO
 {
     static $pdo = null;
     if ($pdo instanceof PDO) {
         return $pdo;
     }
-    $pdo = new PDO('sqlite:' . DB_PATH, null, null, [
+    $cfg = db_config();
+    $dsn = sprintf(
+        'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+        $cfg['host'],
+        (int) $cfg['port'],
+        $cfg['name']
+    );
+    $pdo = new PDO($dsn, $cfg['user'], $cfg['pass'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
     ]);
-    $pdo->exec('PRAGMA foreign_keys = ON');
     init_schema($pdo);
     return $pdo;
 }
 
+function mysql_column_exists(PDO $pdo, string $table, string $column): bool
+{
+    $stmt = $pdo->prepare('
+        SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column
+    ');
+    $stmt->execute([':table' => $table, ':column' => $column]);
+    return (int) $stmt->fetchColumn() > 0;
+}
+
 function init_schema(PDO $pdo): void
 {
-    $pdo->exec('
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            display_name TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT "user",
-            created_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS photos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            filename TEXT NOT NULL,
-            original_name TEXT NOT NULL,
-            caption TEXT NOT NULL DEFAULT "",
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            parent_id INTEGER,
-            content TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            FOREIGN KEY (parent_id) REFERENCES messages(id)
-        );
-        CREATE TABLE IF NOT EXISTS memos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS photo_likes (
-            photo_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            PRIMARY KEY (photo_id, user_id),
-            FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-        CREATE TABLE IF NOT EXISTS cards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT NOT NULL UNIQUE,
-            created_by INTEGER NOT NULL,
-            used_by INTEGER,
-            created_at TEXT NOT NULL,
-            used_at TEXT,
-            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (used_by) REFERENCES users(id) ON DELETE SET NULL
-        );
-    ');
-    $exists = $pdo->prepare('SELECT value FROM settings WHERE key = :key');
-    $exists->execute([':key' => 'site_name']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $ins->execute([':key' => 'site_name', ':value' => '私藏']);
+    require_once __DIR__ . '/schema.php';
+    run_schema($pdo);
+
+    if (!mysql_column_exists($pdo, 'messages', 'parent_id')) {
+        $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INT UNSIGNED NULL');
+        $pdo->exec('CREATE INDEX idx_messages_parent ON messages (parent_id)');
     }
-    $exists->execute([':key' => 'notice_title']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $ins->execute([':key' => 'notice_title', ':value' => '']);
-        $ins->execute([':key' => 'notice_content', ':value' => '']);
-        $ins->execute([':key' => 'notice_updated', ':value' => '']);
-    }
-    $exists->execute([':key' => 'notice_enabled']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $hasNotice = trim(setting_get('notice_content')) !== '';
-        $ins->execute([':key' => 'notice_enabled', ':value' => $hasNotice ? '1' : '0']);
-    }
-    $exists->execute([':key' => 'notice_once']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $ins->execute([':key' => 'notice_once', ':value' => '0']);
-    }
-    $exists->execute([':key' => 'register_open']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $ins->execute([':key' => 'register_open', ':value' => '0']);
-    }
-    $exists->execute([':key' => 'register_auto_card']);
-    if ($exists->fetch() === false) {
-        $ins = $pdo->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)');
-        $ins->execute([':key' => 'register_auto_card', ':value' => '0']);
-    }
-    $cols = $pdo->query('PRAGMA table_info(messages)')->fetchAll();
-    $names = array_column($cols, 'name');
-    if (!in_array('parent_id', $names, true)) {
-        $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INTEGER');
-    }
-    $photoCols = array_column($pdo->query('PRAGMA table_info(photos)')->fetchAll(), 'name');
-    if (!in_array('on_wall', $photoCols, true)) {
-        $pdo->exec('ALTER TABLE photos ADD COLUMN on_wall INTEGER NOT NULL DEFAULT 1');
+    if (!mysql_column_exists($pdo, 'photos', 'on_wall')) {
+        $pdo->exec('ALTER TABLE photos ADD COLUMN on_wall TINYINT UNSIGNED NOT NULL DEFAULT 1');
+        $pdo->exec('CREATE INDEX idx_photos_wall ON photos (on_wall)');
         $pdo->exec("
             UPDATE photos SET on_wall = 0
             WHERE user_id IN (SELECT id FROM users WHERE role = 'admin')
@@ -177,7 +143,7 @@ function now(): string
 
 function setting_get(string $key, string $default = ''): string
 {
-    $stmt = db()->prepare('SELECT value FROM settings WHERE key = :key');
+    $stmt = db()->prepare('SELECT `value` FROM settings WHERE `key` = :key');
     $stmt->execute([':key' => $key]);
     $value = $stmt->fetchColumn();
     return is_string($value) ? $value : $default;
@@ -185,8 +151,8 @@ function setting_get(string $key, string $default = ''): string
 
 function setting_set(string $key, string $value): void
 {
-    $stmt = db()->prepare('INSERT INTO settings (key, value) VALUES (:key, :value)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+    $stmt = db()->prepare('INSERT INTO settings (`key`, `value`) VALUES (:key, :value)
+        ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)');
     $stmt->execute([':key' => $key, ':value' => $value]);
 }
 
@@ -199,6 +165,13 @@ function app_name(): string
     $value = setting_get('site_name');
     $name = $value !== '' ? $value : '私藏';
     return $name;
+}
+
+function nav_label(string $key): string
+{
+    $default = NAV_DEFAULTS[$key] ?? $key;
+    $value = setting_get('nav_' . $key, $default);
+    return $value === '' ? $default : $value;
 }
 
 function notice_data(): ?array

@@ -134,10 +134,10 @@ foreach (scandir(FILES_DIR) ?: [] as $entry) {
 }
 usort($items, static fn(array $a, array $b): int => strcmp($b['mtime'], $a['mtime']));
 
-render_header('文件管理', $admin, 'files');
+render_header(nav_label('files'), $admin, 'files');
 ?>
 <section class="page-head">
-    <h1>文件管理</h1>
+    <h1><?= h(nav_label('files')) ?></h1>
 </section>
 <form class="panel" method="post" enctype="multipart/form-data">
     <?= csrf_field() ?>

@@ -35,10 +35,10 @@ $stmt = db()->prepare('
 $stmt->execute([':user_id' => $user['id']]);
 $memos = $stmt->fetchAll();
 
-render_header('备忘录', $user, 'memo');
+render_header(nav_label('memo'), $user, 'memo');
 ?>
 <section class="page-head">
-    <h1>备忘录</h1>
+    <h1><?= h(nav_label('memo')) ?></h1>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

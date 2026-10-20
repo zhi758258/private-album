@@ -70,10 +70,10 @@ foreach ($stmt->fetchAll() as $row) {
 $usedCount = (int) db()->query('SELECT COUNT(*) FROM cards WHERE used_by IS NOT NULL')->fetchColumn();
 $unusedCount = (int) db()->query('SELECT COUNT(*) FROM cards WHERE used_by IS NULL')->fetchColumn();
 
-render_header('卡密管理', $admin, 'admin_cards');
+render_header(nav_label('admin_cards'), $admin, 'admin_cards');
 ?>
 <section class="page-head">
-    <h1>卡密管理</h1>
+    <h1><?= h(nav_label('admin_cards')) ?></h1>
     <p>卡密永久有效，一张卡密仅供一人使用一次。</p>
 </section>
 
@@ -124,7 +124,7 @@ render_header('卡密管理', $admin, 'admin_cards');
                 <tr>
                     <td><code style="font-size:13px; letter-spacing:0.05em;"><?= h($card['code']) ?></code></td>
                     <td><?= $card['used_by'] ? '<span style="color:var(--muted);">已使用</span>' : '<span style="color:var(--ok);">未使用</span>' ?></td>
-                    <td><?= $card['used_by'] ? h($card['used_name'] ?? '') : '—' ?></td>
+                    <td><?= $card['used_by'] ? h(($card['used_name'] ?? '') . ' #' . (int) $card['used_by']) : '—' ?></td>
                     <td><?= h($card['created_at']) ?></td>
                     <td><?= $card['used_at'] ? h($card['used_at']) : '—' ?></td>
                     <td>

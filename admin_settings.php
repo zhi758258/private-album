@@ -43,6 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/admin_settings.php');
     }
 
+    if ($action === 'nav') {
+        foreach (NAV_DEFAULTS as $navKey => $navDefault) {
+            $label = trim((string) ($_POST['nav_' . $navKey] ?? ''));
+            setting_set('nav_' . $navKey, mb_substr($label, 0, 20));
+        }
+        flash_set('ok', '导航菜单名称已保存。');
+        redirect('/admin_settings.php');
+    }
+
     if ($action === 'password') {
         $current = (string) ($_POST['current_password'] ?? '');
         $new = (string) ($_POST['new_password'] ?? '');
@@ -100,6 +109,22 @@ render_header('后台设置', $admin, 'admin_settings');
     </label>
     <p class="hint">开启后，新用户注册无需填写卡密，系统自动分配一张；关闭后注册必须填写有效卡密。</p>
     <button type="submit">保存注册设置</button>
+</form>
+<form class="panel" method="post">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="nav">
+    <p class="nav-group-title">通用菜单（所有用户可见）</p>
+    <?php foreach (['home', 'board', 'album', 'memo', 'settings'] as $navKey): ?>
+        <label for="nav_<?= h($navKey) ?>"><?= h(NAV_DEFAULTS[$navKey]) ?></label>
+        <input id="nav_<?= h($navKey) ?>" name="nav_<?= h($navKey) ?>" maxlength="20" value="<?= h(nav_label($navKey)) ?>" placeholder="<?= h(NAV_DEFAULTS[$navKey]) ?>">
+    <?php endforeach; ?>
+    <p class="nav-group-title">管理员菜单</p>
+    <?php foreach (['admin', 'admin_cards', 'admin_photos', 'admin_memos', 'files', 'admin_settings'] as $navKey): ?>
+        <label for="nav_<?= h($navKey) ?>"><?= h(NAV_DEFAULTS[$navKey]) ?></label>
+        <input id="nav_<?= h($navKey) ?>" name="nav_<?= h($navKey) ?>" maxlength="20" value="<?= h(nav_label($navKey)) ?>" placeholder="<?= h(NAV_DEFAULTS[$navKey]) ?>">
+    <?php endforeach; ?>
+    <p class="hint">修改后导航菜单与对应页面标题同步更新；留空保存恢复默认名称。</p>
+    <button type="submit">保存菜单名称</button>
 </form>
 <form class="panel" method="post">
     <?= csrf_field() ?>

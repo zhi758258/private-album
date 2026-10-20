@@ -5,16 +5,16 @@ require __DIR__ . '/includes/layout.php';
 
 $admin = require_admin();
 $memos = db()->query('
-    SELECT memos.*, users.display_name, users.username
+    SELECT memos.*, users.display_name, users.username, users.id AS user_id
     FROM memos
     JOIN users ON users.id = memos.user_id
     ORDER BY memos.id DESC
 ')->fetchAll();
 
-render_header('全部备忘录', $admin, 'admin_memos');
+render_header(nav_label('admin_memos'), $admin, 'admin_memos');
 ?>
 <section class="page-head">
-    <h1>全部备忘录</h1>
+    <h1><?= h(nav_label('admin_memos')) ?></h1>
 </section>
 <?php if (!$memos): ?>
     <div class="empty">还没有人写过备忘。</div>
@@ -22,7 +22,7 @@ render_header('全部备忘录', $admin, 'admin_memos');
     <?php foreach ($memos as $memo): ?>
         <article class="memo-card">
             <h3><?= h($memo['title']) ?></h3>
-            <div class="memo-time"><?= h($memo['display_name']) ?>（<?= h($memo['username']) ?>） · <?= h($memo['created_at']) ?></div>
+            <div class="memo-time"><?= h($memo['display_name']) ?> #<?= (int) $memo['user_id'] ?>（<?= h($memo['username']) ?>） · <?= h($memo['created_at']) ?></div>
             <p><?= h($memo['content']) ?></p>
         </article>
     <?php endforeach; ?>

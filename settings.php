@@ -36,10 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('/settings.php');
 }
 
-render_header('设置', $user, 'settings');
+render_header(nav_label('settings'), $user, 'settings');
 ?>
 <section class="page-head">
-    <h1>设置</h1>
+    <h1><?= h(nav_label('settings')) ?></h1>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>

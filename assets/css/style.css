@@ -499,6 +499,13 @@ button, .btn {
 button:hover, .btn:hover { filter: brightness(1.08); box-shadow: 0 6px 18px rgba(212, 165, 116, 0.25); }
 button:active, .btn:active { transform: translateY(1px) scale(0.99); }
 .hint { color: var(--muted); font-size: 13px; margin-top: -6px; margin-bottom: 14px; }
+.nav-group-title {
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    margin: 8px 0 10px;
+}
+.nav-group-title:first-child { margin-top: 0; }
 
 .login-shell {
     min-height: 100vh;

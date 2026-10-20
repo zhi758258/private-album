@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $rows = db()->query('
-    SELECT messages.*, users.display_name
+    SELECT messages.*, users.display_name, users.id AS user_id
     FROM messages
     JOIN users ON users.id = messages.user_id
     ORDER BY messages.id ASC
@@ -58,10 +58,10 @@ foreach ($rows as $row) {
 }
 $threads = array_reverse($threads);
 
-render_header('留言板', $user, 'board');
+render_header(nav_label('board'), $user, 'board');
 ?>
 <section class="page-head">
-    <h1>留言板</h1>
+    <h1><?= h(nav_label('board')) ?></h1>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>
@@ -74,11 +74,11 @@ render_header('留言板', $user, 'board');
 <?php else: ?>
     <?php foreach ($threads as $msg): ?>
         <article class="msg" id="msg-<?= (int) $msg['id'] ?>">
-            <div class="who-line"><?= h($msg['display_name']) ?> · <?= h($msg['created_at']) ?></div>
+            <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
             <p><?= h($msg['content']) ?></p>
             <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
                 <article class="msg reply">
-                    <div class="who-line"><?= h($reply['display_name']) ?> · <?= h($reply['created_at']) ?></div>
+                    <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
                     <p><?= h($reply['content']) ?></p>
                 </article>
             <?php endforeach; ?>

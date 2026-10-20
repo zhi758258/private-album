@@ -93,10 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $users = db()->query('SELECT id, username, display_name, role, created_at FROM users ORDER BY id ASC')->fetchAll();
 
-render_header('用户管理', $admin, 'admin');
+render_header(nav_label('admin'), $admin, 'admin');
 ?>
 <section class="page-head">
-    <h1><?= $editing ? '编辑用户' : '用户管理' ?></h1>
+    <h1><?= $editing ? '编辑用户' : h(nav_label('admin')) ?></h1>
+    <p>每个用户拥有唯一数字 ID（#ID），注册或添加时自动分配。</p>
 </section>
 <form class="panel" method="post">
     <?= csrf_field() ?>
@@ -123,6 +124,7 @@ render_header('用户管理', $admin, 'admin');
     <table class="table">
         <thead>
             <tr>
+                <th>ID</th>
                 <th>账号</th>
                 <th>显示名</th>
                 <th>角色</th>
@@ -133,6 +135,7 @@ render_header('用户管理', $admin, 'admin');
         <tbody>
         <?php foreach ($users as $row): ?>
             <tr>
+                <td>#<?= (int) $row['id'] ?></td>
                 <td><?= h($row['username']) ?></td>
                 <td><?= h($row['display_name']) ?></td>
                 <td><?= $row['role'] === 'admin' ? '管理员' : '用户' ?></td>
