@@ -13,7 +13,7 @@
     --surface-shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
     --surface-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
     --muted-text: #64748b;
-    --input-bg: rgba(255, 255, 255, 0.84);
+    --input-bg: color-mix(in srgb, var(--surface-1) 88%, var(--theme-primary) 4%);
     --panel-glow: color-mix(in srgb, var(--theme-primary) 14%, transparent);
 
     --bg: var(--theme-bg);
@@ -46,7 +46,7 @@
     --surface-shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
     --surface-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.24);
     --muted-text: #9ca3af;
-    --input-bg: rgba(15, 23, 42, 0.54);
+    --input-bg: color-mix(in srgb, var(--surface-2) 80%, transparent);
     --panel-glow: color-mix(in srgb, var(--theme-primary) 18%, transparent);
 }
 
@@ -358,6 +358,7 @@ body.nav-open .drawer { transform: translateX(0); }
     -webkit-backdrop-filter: blur(16px);
     box-shadow: var(--surface-shadow);
 }
+.theme-panel[hidden] { display: none; }
 .theme-chip {
     display: flex;
     flex-direction: column;
@@ -516,8 +517,9 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
 .flash-err { border-color: #ef4444; color: #e8a090; }
 
 .masonry {
-    columns: 3 240px;
-    column-gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 18px;
 }
 .card {
     break-inside: avoid;
@@ -538,7 +540,8 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
 .card img {
     display: block;
     width: 100%;
-    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
     transition: transform 0.5s var(--ease), opacity 0.4s var(--ease);
     -webkit-touch-callout: default;
     -webkit-user-select: none;
@@ -599,7 +602,7 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
     -webkit-overflow-scrolling: touch;
     gap: 16px;
     scrollbar-width: none;
-    background: #11100e;
+    background: transparent;
 }
 .wall-track::-webkit-scrollbar { display: none; }
 .wall-slide {
@@ -608,17 +611,15 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
     scroll-snap-align: start;
 }
 .wall-slide .thumb-link img {
-    max-height: 72vh;
     width: 100%;
-    object-fit: contain;
-    background: #11100e;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
     -webkit-touch-callout: default;
     pointer-events: auto;
     user-select: none;
 }
 .wall-slide img.thumb-img {
-    min-height: 260px;
-    background: linear-gradient(180deg, #1b1712, #11100e);
+    min-height: 0;
 }
 .wall-prev, .wall-next {
     position: absolute;
@@ -641,7 +642,7 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
 .view-bar .seg {
     display: inline-flex;
     padding: 3px;
-    background: #16130f;
+    background: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: 11px;
     gap: 3px;
@@ -663,16 +664,14 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
     color: var(--theme-text);
 }
 
-.masonry-wall { columns: 2 240px; column-gap: 18px; }
-.masonry-wall .card { margin-bottom: 18px; }
+.masonry-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+.masonry-wall .card { margin-bottom: 0; }
 .masonry-wall .wall-slide { flex: none; }
 .masonry-wall .thumb-link img,
 .masonry-wall .wall-slide .thumb-link img {
-    max-height: none;
-    min-height: 0;
     width: 100%;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
-    background: #11100e;
 }
 
 .panel {
@@ -689,7 +688,7 @@ input, textarea, select {
     margin-bottom: 14px;
     padding: 11px 12px;
     border: 1px solid var(--line);
-    background: #16130f;
+    background: var(--input-bg);
     color: var(--ink);
     font: inherit;
     border-radius: var(--radius-sm);
@@ -699,7 +698,7 @@ input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--gold-deep);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 16%, transparent);
-    background: #191511;
+    background: var(--input-bg);
 }
 textarea { min-height: 110px; resize: vertical; }
 button, .btn {
@@ -775,7 +774,7 @@ button:active, .btn:active { transform: translateY(1px) scale(0.99); }
 .reply-form {
     margin-top: 12px;
     padding: 12px;
-    background: #16130f;
+    background: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
 }
@@ -922,7 +921,7 @@ body.modal-open {
     position: fixed !important;
     inset: 0;
     z-index: 10000;
-    background: rgba(10, 8, 6, 0.94);
+    background: color-mix(in srgb, var(--theme-bg) 92%, #000);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -948,7 +947,7 @@ body.modal-open {
     object-fit: contain;
     border-radius: var(--radius);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-    background: #0d0b09;
+    background: var(--surface-2);
     animation: pageIn 0.3s var(--ease) both;
 }
 .lightbox-cap {
@@ -1063,10 +1062,9 @@ body.modal-open {
     }
     .hero h1 { font-size: 26px; }
     .masonry {
-        columns: 1;
-        column-gap: 0;
+        grid-template-columns: 1fr;
     }
-    .masonry-wall { columns: 1; }
+    .masonry-wall { grid-template-columns: 1fr; }
     .panel { padding: 16px; }
     .card .meta { flex-direction: column; gap: 4px; align-items: flex-start; }
     .msg.reply { margin-left: 8px; }
@@ -1121,8 +1119,8 @@ body.modal-open {
 }
 
 @media (min-width: 721px) and (max-width: 1100px) {
-    .masonry { columns: 2 220px; }
-    .masonry-wall { columns: 2 220px; }
+    .masonry { grid-template-columns: repeat(2, 1fr); }
+    .masonry-wall { grid-template-columns: repeat(2, 1fr); }
 }
 /* ===== 头像 ===== */
 .avatar {
@@ -1143,8 +1141,8 @@ body.modal-open {
 }
 img.avatar { display: block; }
 .avatar-fallback {
-    background: linear-gradient(135deg, #4a3f32, #6b5a45);
-    color: var(--gold);
+    background: var(--theme-gradient);
+    color: #fff;
 }
 .avatar-top { width: 30px; height: 30px; font-size: 14px; }
 .avatar-lg { width: 64px; height: 64px; font-size: 26px; }
@@ -1231,7 +1229,7 @@ img.avatar { display: block; }
 .crop-stage {
     border-radius: 12px;
     overflow: hidden;
-    background: #0d0b09;
+    background: var(--surface-2);
     border: 1px solid var(--line);
 }
 .crop-stage canvas {
