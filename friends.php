@@ -164,7 +164,9 @@ render_header(nav_label('friends'), $user, 'friends');
         <div class="friend-list">
             <?php foreach ($searchResults as $r): ?>
                 <div class="friend-item">
-                    <?= avatar_html($r['avatar'] ?? null, $r['display_name'], 'avatar avatar-md') ?>
+                    <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $r['id'] ?>">
+                        <?= avatar_html($r['avatar'] ?? null, $r['display_name'], 'avatar avatar-md') ?>
+                    </button>
                     <div class="friend-info">
                         <div class="friend-name"><?= h($r['display_name']) ?></div>
                         <div class="friend-sub">@<?= h($r['username']) ?></div>
@@ -259,7 +261,9 @@ render_header(nav_label('friends'), $user, 'friends');
                 $fid = (int) $f['id'];
                 $unread = friend_unread_between($uid, $fid); ?>
                 <div class="friend-item">
-                    <?= avatar_html($f['avatar'] ?? null, $f['display_name'], 'avatar avatar-md') ?>
+                    <button type="button" class="js-user avatar-btn" data-user-id="<?= $fid ?>">
+                        <?= avatar_html($f['avatar'] ?? null, $f['display_name'], 'avatar avatar-md') ?>
+                    </button>
                     <div class="friend-info">
                         <div class="friend-name"><?= h($f['display_name']) ?></div>
                         <div class="friend-sub">@<?= h($f['username']) ?></div>

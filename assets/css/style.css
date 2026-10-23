@@ -1452,3 +1452,68 @@ img.avatar { display: block; }
     .chat-box { height: 56vh; }
     .friend-item { flex-wrap: wrap; }
 }
+
+/* ===== 可点击头像 ===== */
+.avatar-btn {
+    flex-shrink: 0;
+    width: auto;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 50%;
+    line-height: 0;
+}
+.avatar-btn:hover { filter: none; box-shadow: none; transform: none; }
+.avatar-btn:hover .avatar { box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-primary) 25%, transparent); }
+
+/* ===== 用户资料卡片 ===== */
+.user-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.user-mask[hidden] { display: none !important; }
+.user-card {
+    position: relative;
+    width: min(92vw, 340px);
+    padding: 28px 22px 22px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+.user-card-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: auto;
+    padding: 2px 8px;
+    margin: 0;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+.user-card-close:hover { color: var(--ink); filter: none; box-shadow: none; }
+.user-card-avatar { display: flex; justify-content: center; margin-bottom: 12px; }
+.user-card-name { font-size: 18px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
+.user-card-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.user-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 18px;
+}
+.user-card-actions .btn { width: auto; padding: 9px 20px; margin: 0; }

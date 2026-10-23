@@ -144,6 +144,15 @@ function render_footer(): void
     </div>
     <footer class="foot"></footer>
     <?= notice_markup() ?>
+    <div class="user-mask" id="user-card" hidden>
+        <div class="user-card" role="dialog" aria-modal="true" aria-label="用户资料">
+            <button type="button" class="user-card-close" data-uc-close aria-label="关闭">×</button>
+            <div class="user-card-avatar" id="uc-avatar"></div>
+            <div class="user-card-name" id="uc-name"></div>
+            <div class="user-card-sub" id="uc-sub"></div>
+            <div class="user-card-actions" id="uc-actions"></div>
+        </div>
+    </div>
     <div class="confirm-mask" id="delete-confirm" hidden>
         <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
             <h2 id="delete-confirm-title">确认删除</h2>
@@ -820,6 +829,114 @@ function render_footer(): void
                 applyTheme(b.getAttribute('data-theme'));
                 if (panel) panel.hidden = true;
             });
+        });
+    })();
+    </script>
+    <script>
+    (function () {
+        var mask = document.getElementById('user-card');
+        if (!mask) return;
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        var avatarEl = document.getElementById('uc-avatar');
+        var nameEl = document.getElementById('uc-name');
+        var subEl = document.getElementById('uc-sub');
+        var actionsEl = document.getElementById('uc-actions');
+
+        function close() {
+            mask.hidden = true;
+            document.body.classList.remove('modal-open');
+        }
+        function makeBtn(label, cls, onClick) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn' + (cls ? ' ' + cls : '');
+            b.textContent = label;
+            b.addEventListener('click', onClick);
+            return b;
+        }
+        function tag(label, cls) {
+            var s = document.createElement('span');
+            s.className = 'tag' + (cls ? ' ' + cls : '');
+            s.textContent = label;
+            return s;
+        }
+        function renderActions(data) {
+            actionsEl.innerHTML = '';
+            if (data.state === 'self') {
+                actionsEl.appendChild(tag('这是你自己'));
+                return;
+            }
+            if (data.state === 'friend') {
+                actionsEl.appendChild(makeBtn('发消息', '', function () {
+                    window.location.href = '/chat.php?u=' + data.id;
+                }));
+                actionsEl.appendChild(makeBtn('删除好友', 'ghost-btn', function () { doAction('remove', data); }));
+                return;
+            }
+            if (data.state === 'sent') {
+                actionsEl.appendChild(tag('好友请求已发送'));
+                return;
+            }
+            if (data.state === 'incoming') {
+                actionsEl.appendChild(makeBtn('接受好友请求', '', function () { doAction('accept', data); }));
+                return;
+            }
+            actionsEl.appendChild(makeBtn('加好友', '', function () { doAction('request', data); }));
+        }
+        function doAction(action, data) {
+            actionsEl.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+            var fd = new FormData();
+            fd.append('action', action);
+            fd.append('user_id', data.id);
+            fd.append('csrf', csrf);
+            fetch('/friend_action.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json().catch(function () { return null; }); })
+                .then(function (d) {
+                    if (!d || !d.ok) {
+                        alert((d && d.error) || '操作失败，请重试。');
+                        actionsEl.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                        return;
+                    }
+                    data.state = d.state;
+                    renderActions(data);
+                })
+                .catch(function () {
+                    alert('操作失败，请重试。');
+                    actionsEl.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                });
+        }
+        function show(data) {
+            avatarEl.innerHTML = data.avatar_html;
+            nameEl.textContent = data.display_name;
+            subEl.textContent = '@' + data.username;
+            renderActions(data);
+        }
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+            var trigger = e.target.closest('.js-user');
+            if (!trigger) return;
+            e.preventDefault();
+            var id = trigger.getAttribute('data-user-id');
+            if (!id) return;
+            mask.hidden = false;
+            document.body.classList.add('modal-open');
+            avatarEl.innerHTML = '';
+            nameEl.textContent = '加载中…';
+            subEl.textContent = '';
+            actionsEl.innerHTML = '';
+            fetch('/user_info.php?u=' + encodeURIComponent(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json().catch(function () { return null; }); })
+                .then(function (d) {
+                    if (!d || !d.ok) { alert((d && d.error) || '加载失败。'); close(); return; }
+                    show(d);
+                })
+                .catch(function () { alert('加载失败，请重试。'); close(); });
+        });
+        mask.addEventListener('click', function (e) { if (e.target === mask) close(); });
+        var cb = mask.querySelector('[data-uc-close]');
+        if (cb) cb.addEventListener('click', close);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !mask.hidden) close();
         });
     })();
     </script>

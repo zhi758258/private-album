@@ -2,15 +2,22 @@
 declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
 
-require_login();
+$user = require_login();
 $name = basename((string) ($_GET['f'] ?? ''));
 if ($name === '' || str_contains($name, '/') || str_contains($name, '\\')) {
     http_response_code(404);
     exit('文件不存在。');
 }
-$stmt = db()->prepare('SELECT filename, original_name FROM photos WHERE filename = :filename');
+$stmt = db()->prepare('SELECT filename, original_name, user_id, on_wall FROM photos WHERE filename = :filename');
 $stmt->execute([':filename' => $name]);
 $photo = $stmt->fetch();
+if ($photo) {
+    $canView = (int) $photo['user_id'] === (int) $user['id'] || !empty($photo['on_wall']) || $user['role'] === 'admin';
+    if (!$canView) {
+        http_response_code(403);
+        exit('无权访问该照片。');
+    }
+}
 $path = UPLOAD_DIR . '/' . $name;
 $realDir = realpath(UPLOAD_DIR);
 $realFile = realpath($path);

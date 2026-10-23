@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/album.php');
     }
 
-    if ($action === 'wall' && $user['role'] === 'admin') {
+    if ($action === 'wall') {
         $photoId = (int) ($_POST['photo_id'] ?? 0);
         $onWall = isset($_POST['on_wall']) ? 1 : 0;
         $stmt = db()->prepare('UPDATE photos SET on_wall = :on_wall WHERE id = :id AND user_id = :user_id');
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash_set('err', '保存文件失败。');
         redirect('/album.php');
     }
-    $onWall = $user['role'] === 'admin' ? 0 : 1;
+    $onWall = isset($_POST['on_wall']) ? 1 : 0;
     $stmt = db()->prepare('
         INSERT INTO photos (user_id, filename, original_name, caption, created_at, on_wall)
         VALUES (:user_id, :filename, :original_name, :caption, :created_at, :on_wall)
@@ -96,6 +96,10 @@ render_header(nav_label('album'), $user, 'album');
     <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
     <label for="caption">说明（可选）</label>
     <input id="caption" name="caption" maxlength="120">
+    <label class="check">
+        <input type="checkbox" name="on_wall" value="1">
+        上传后显示到相册墙
+    </label>
     <button type="submit">上传到相册</button>
 </form>
 <?php if (!$photos): ?>
@@ -116,16 +120,16 @@ render_header(nav_label('album'), $user, 'album');
                         <span class="lbl"><?= !empty($photo['liked']) ? '已喜欢' : '喜欢' ?></span>
                     </button>
                     <a class="btn save-btn" href="/photo.php?f=<?= rawurlencode($photo['filename']) ?>&dl=1">保存到相册</a>
+                    <form method="post" class="wall-form">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="wall">
+                        <input type="hidden" name="photo_id" value="<?= (int) $photo['id'] ?>">
+                        <label class="check">
+                            <input type="checkbox" name="on_wall" value="1" <?= !empty($photo['on_wall']) ? 'checked' : '' ?> onchange="this.form.submit()">
+                            显示到相册墙
+                        </label>
+                    </form>
                     <?php if ($user['role'] === 'admin'): ?>
-                        <form method="post" class="wall-form">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="wall">
-                            <input type="hidden" name="photo_id" value="<?= (int) $photo['id'] ?>">
-                            <label class="check">
-                                <input type="checkbox" name="on_wall" value="1" <?= !empty($photo['on_wall']) ? 'checked' : '' ?> onchange="this.form.submit()">
-                                添加到相册墙
-                            </label>
-                        </form>
                         <form method="post" class="wall-form js-delete-photo">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete">

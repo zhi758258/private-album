@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $stmt = db()->prepare('
-    SELECT * FROM private_messages
+    SELECT id, sender_id, content, created_at FROM private_messages
     WHERE (sender_id = :me AND receiver_id = :other)
        OR (sender_id = :other2 AND receiver_id = :me2)
     ORDER BY id ASC
@@ -47,15 +47,27 @@ $stmt = db()->prepare('
 $stmt->execute([':me' => $uid, ':other' => $otherId, ':other2' => $otherId, ':me2' => $uid]);
 $messages = $stmt->fetchAll();
 
+$last = 0;
+foreach ($messages as $m) {
+    if ((int) $m['id'] > $last) {
+        $last = (int) $m['id'];
+    }
+}
+
 $mark = db()->prepare('UPDATE private_messages SET is_read = 1 WHERE receiver_id = :receiver_id AND sender_id = :sender_id AND is_read = 0');
 $mark->execute([':receiver_id' => $uid, ':sender_id' => $otherId]);
+
+$selfAvatar = avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-sm');
+$otherAvatar = avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-sm');
 
 render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
 ?>
 <section class="page-head chat-head">
     <a class="btn ghost-btn" href="/friends.php">← 好友列表</a>
     <div class="chat-peer">
-        <?= avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-md') ?>
+        <button type="button" class="js-user avatar-btn" data-user-id="<?= $otherId ?>">
+            <?= avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-md') ?>
+        </button>
         <div>
             <div class="friend-name"><?= h($other['display_name']) ?></div>
             <div class="friend-sub">@<?= h($other['username']) ?></div>
@@ -69,33 +81,124 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
     <?php else: ?>
         <?php foreach ($messages as $m):
             $mine = (int) $m['sender_id'] === $uid; ?>
-            <div class="chat-line <?= $mine ? 'is-mine' : 'is-theirs' ?>">
-                <?php if (!$mine): ?>
-                    <?= avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-sm') ?>
-                <?php endif; ?>
+            <div class="chat-line <?= $mine ? 'is-mine' : 'is-theirs' ?>" data-id="<?= (int) $m['id'] ?>">
+                <?php if (!$mine): ?><?= $otherAvatar ?><?php endif; ?>
                 <div class="chat-bubble">
                     <div class="chat-text"><?= nl2br(h($m['content'])) ?></div>
                     <div class="chat-time"><?= h($m['created_at']) ?></div>
                 </div>
-                <?php if ($mine): ?>
-                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-sm') ?>
-                <?php endif; ?>
+                <?php if ($mine): ?><?= $selfAvatar ?><?php endif; ?>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
 
-<form class="panel chat-form" method="post" action="/chat.php?u=<?= $otherId ?>">
+<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>">
     <?= csrf_field() ?>
-    <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，点击发送" aria-label="消息内容"></textarea>
+    <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，回车发送" aria-label="消息内容"></textarea>
     <button type="submit">发送</button>
 </form>
 <script>
+window.CHAT = {
+    user: <?= (int) $otherId ?>,
+    last: <?= (int) $last ?>,
+    csrf: <?= json_encode(csrf_token(), JSON_UNESCAPED_UNICODE) ?>,
+    selfAvatar: <?= json_encode($selfAvatar, JSON_UNESCAPED_UNICODE) ?>,
+    otherAvatar: <?= json_encode($otherAvatar, JSON_UNESCAPED_UNICODE) ?>
+};
+</script>
+<script>
 (function () {
     var box = document.getElementById('chatBox');
-    if (box) box.scrollTop = box.scrollHeight;
+    var form = document.getElementById('chatForm');
     var ta = document.getElementById('content');
-    if (ta) ta.focus();
+    var cfg = window.CHAT;
+    if (!box || !form || !ta || !cfg) return;
+    var last = cfg.last;
+    var sending = false;
+
+    function lineEl(msg) {
+        var line = document.createElement('div');
+        line.className = 'chat-line ' + (msg.mine ? 'is-mine' : 'is-theirs');
+        line.setAttribute('data-id', String(msg.id));
+        var bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        var text = document.createElement('div');
+        text.className = 'chat-text';
+        text.textContent = msg.content;
+        bubble.appendChild(text);
+        var time = document.createElement('div');
+        time.className = 'chat-time';
+        time.textContent = msg.created_at;
+        bubble.appendChild(time);
+        var wrap = document.createElement('span');
+        wrap.innerHTML = msg.mine ? cfg.selfAvatar : cfg.otherAvatar;
+        var avatar = wrap.firstElementChild;
+        if (msg.mine) {
+            line.appendChild(bubble);
+            if (avatar) line.appendChild(avatar);
+        } else {
+            if (avatar) line.appendChild(avatar);
+            line.appendChild(bubble);
+        }
+        return line;
+    }
+    function nearBottom() {
+        return box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+    }
+    function append(list) {
+        if (!list || !list.length) return;
+        var stick = nearBottom();
+        list.forEach(function (m) {
+            if (box.querySelector('.chat-line[data-id="' + m.id + '"]')) return;
+            box.appendChild(lineEl(m));
+            if (m.id > last) last = m.id;
+        });
+        var empty = box.querySelector('.empty');
+        if (empty) empty.remove();
+        if (stick) box.scrollTop = box.scrollHeight;
+    }
+    function poll() {
+        fetch('/chat_api.php?u=' + cfg.user + '&after=' + last, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (d) { if (d && d.ok) append(d.messages); })
+            .catch(function () {});
+    }
+    function send() {
+        var val = ta.value.trim();
+        if (val === '' || sending) return;
+        sending = true;
+        var fd = new FormData();
+        fd.append('u', cfg.user);
+        fd.append('content', val);
+        fd.append('csrf', cfg.csrf);
+        fetch('/chat_api.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (d) {
+                if (d && d.ok && d.message) {
+                    ta.value = '';
+                    append([d.message]);
+                    box.scrollTop = box.scrollHeight;
+                }
+            })
+            .catch(function () {})
+            .then(function () { sending = false; });
+    }
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        send();
+    });
+    ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+            e.preventDefault();
+            if (form.requestSubmit) form.requestSubmit();
+            else form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+    box.scrollTop = box.scrollHeight;
+    ta.focus();
+    setInterval(poll, 4000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
 })();
 </script>
 <?php render_footer();

@@ -128,6 +128,12 @@ function init_schema(PDO $pdo): void
 
     $pdo->exec("UPDATE users SET display_name = '死鬼老公' WHERE username = 'admin' AND display_name = '管理员'");
 
+    $wallMigrated = (int) $pdo->query("SELECT COUNT(*) FROM settings WHERE `key` = 'wall_private_migrated'")->fetchColumn();
+    if ($wallMigrated === 0) {
+        $pdo->exec("UPDATE photos SET on_wall = 0 WHERE user_id IN (SELECT id FROM users WHERE role <> 'admin')");
+        $pdo->exec("INSERT IGNORE INTO settings (`key`, `value`) VALUES ('wall_private_migrated', '1')");
+    }
+
     $count = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
     if ($count === 0) {
         $stmt = $pdo->prepare('
