@@ -22,6 +22,7 @@ const ALLOWED_MIME = [
 const NAV_DEFAULTS = [
     'home' => '首页',
     'board' => '留言板',
+    'space' => '空间',
     'friends' => '好友',
     'album' => '我的相册',
     'memo' => '备忘录',
@@ -623,4 +624,15 @@ function friend_unread_between(int $uid, int $otherId): int
     $stmt = db()->prepare('SELECT COUNT(*) FROM private_messages WHERE receiver_id = :receiver_id AND sender_id = :sender_id AND is_read = 0');
     $stmt->execute([':receiver_id' => $uid, ':sender_id' => $otherId]);
     return (int) $stmt->fetchColumn();
+}
+
+function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool
+{
+    if ($viewerId === $targetId) {
+        return true;
+    }
+    if ($viewerRole === 'admin') {
+        return true;
+    }
+    return are_friends($viewerId, $targetId);
 }

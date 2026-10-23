@@ -10,6 +10,7 @@ function render_header(string $title, array $user, string $active = ''): void
     $navIcons = [
         'home' => '<path d="M3 12 12 4l9 8M5 11v9h14v-9"/>',
         'board' => '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8M8 13h5"/>',
+        'space' => '<path d="M4 5h16v15H4z"/><circle cx="12" cy="10" r="2.6"/><path d="M7.5 17a4.5 4.5 0 0 1 9 0"/>',
         'friends' => '<path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11a3 3 0 1 0 0-6"/><path d="M14.8 20a5.2 5.2 0 0 1 5.7-5.1"/>',
         'album' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
         'memo' => '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
@@ -24,6 +25,7 @@ function render_header(string $title, array $user, string $active = ''): void
     $baseNav = [
         ['key' => 'home', 'href' => '/index.php'],
         ['key' => 'board', 'href' => '/board.php'],
+        ['key' => 'space', 'href' => '/space.php'],
         ['key' => 'friends', 'href' => '/friends.php'],
         ['key' => 'album', 'href' => '/album.php'],
         ['key' => 'memo', 'href' => '/memo.php'],
@@ -863,10 +865,15 @@ function render_footer(): void
         function renderActions(data) {
             actionsEl.innerHTML = '';
             if (data.state === 'self') {
-                actionsEl.appendChild(tag('这是你自己'));
+                actionsEl.appendChild(makeBtn('我的空间', '', function () {
+                    window.location.href = '/space.php';
+                }));
                 return;
             }
             if (data.state === 'friend') {
+                actionsEl.appendChild(makeBtn('逛空间', '', function () {
+                    window.location.href = '/space.php?u=' + data.id;
+                }));
                 actionsEl.appendChild(makeBtn('发消息', '', function () {
                     window.location.href = '/chat.php?u=' + data.id;
                 }));

@@ -126,6 +126,35 @@ CREATE TABLE IF NOT EXISTS private_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- 用户空间：心情说说 + 日志（默认好友可见）
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS shuoshuo (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    content TEXT NOT NULL,
+    mood VARCHAR(20) NOT NULL DEFAULT '',
+    visibility VARCHAR(12) NOT NULL DEFAULT 'friends',
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_shuoshuo_user (user_id),
+    CONSTRAINT fk_shuoshuo_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS diaries (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    title VARCHAR(120) NOT NULL,
+    content TEXT NOT NULL,
+    visibility VARCHAR(12) NOT NULL DEFAULT 'friends',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_diaries_user (user_id),
+    CONSTRAINT fk_diaries_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- 默认设置（INSERT IGNORE：已存在则跳过，不覆盖现有值）
 -- ============================================================
 
@@ -142,6 +171,7 @@ INSERT IGNORE INTO settings (`key`, `value`) VALUES
 INSERT IGNORE INTO settings (`key`, `value`) VALUES
     ('nav_home', '首页'),
     ('nav_board', '留言板'),
+    ('nav_space', '空间'),
     ('nav_friends', '好友'),
     ('nav_album', '我的相册'),
     ('nav_memo', '备忘录'),
