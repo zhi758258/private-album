@@ -26,6 +26,7 @@ const NAV_DEFAULTS = [
     'friends' => '好友',
     'album' => '我的相册',
     'memo' => '备忘录',
+    'ddz' => '斗地主',
     'settings' => '设置',
     'admin' => '用户管理',
     'admin_cards' => '卡密管理',

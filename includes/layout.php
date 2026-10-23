@@ -14,6 +14,7 @@ function render_header(string $title, array $user, string $active = ''): void
         'friends' => '<path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11a3 3 0 1 0 0-6"/><path d="M14.8 20a5.2 5.2 0 0 1 5.7-5.1"/>',
         'album' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
         'memo' => '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+        'ddz' => '<path d="M4 6h11v13H4z"/><path d="M15 9l5-3v12l-5-3z"/><path d="M8 10l1 1-1 1"/>',
         'admin' => '<path d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M16 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M14.5 20a5.5 5.5 0 0 1 6.5-5.2"/>',
         'admin_cards' => '<path d="M4 5h16v14H4z"/><path d="M4 9h16M4 15h16"/>',
         'admin_photos' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
@@ -29,6 +30,7 @@ function render_header(string $title, array $user, string $active = ''): void
         ['key' => 'friends', 'href' => '/friends.php'],
         ['key' => 'album', 'href' => '/album.php'],
         ['key' => 'memo', 'href' => '/memo.php'],
+        ['key' => 'ddz', 'href' => '/ddz.php'],
     ];
     $adminNav = [
         ['key' => 'admin', 'href' => '/admin.php'],

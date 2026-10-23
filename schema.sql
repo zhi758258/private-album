@@ -155,6 +155,35 @@ CREATE TABLE IF NOT EXISTS diaries (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- 斗地主
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS ddz_rooms (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code VARCHAR(12) NOT NULL,
+    owner_id INT UNSIGNED NOT NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'waiting',
+    state MEDIUMTEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ddz_rooms_code (code),
+    KEY idx_ddz_rooms_owner (owner_id),
+    CONSTRAINT fk_ddz_rooms_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ddz_games (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    room_code VARCHAR(12) NOT NULL,
+    delta INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_ddz_games_user (user_id),
+    CONSTRAINT fk_ddz_games_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- 默认设置（INSERT IGNORE：已存在则跳过，不覆盖现有值）
 -- ============================================================
 
@@ -175,6 +204,7 @@ INSERT IGNORE INTO settings (`key`, `value`) VALUES
     ('nav_friends', '好友'),
     ('nav_album', '我的相册'),
     ('nav_memo', '备忘录'),
+    ('nav_ddz', '斗地主'),
     ('nav_settings', '设置'),
     ('nav_admin', '用户管理'),
     ('nav_admin_cards', '卡密管理'),
