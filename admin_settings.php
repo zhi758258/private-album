@@ -114,7 +114,7 @@ render_header('后台设置', $admin, 'admin_settings');
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="nav">
     <p class="nav-group-title">通用菜单（所有用户可见）</p>
-    <?php foreach (['home', 'board', 'album', 'memo', 'settings'] as $navKey): ?>
+    <?php foreach (['home', 'board', 'friends', 'album', 'memo', 'settings'] as $navKey): ?>
         <label for="nav_<?= h($navKey) ?>"><?= h(NAV_DEFAULTS[$navKey]) ?></label>
         <input id="nav_<?= h($navKey) ?>" name="nav_<?= h($navKey) ?>" maxlength="20" value="<?= h(nav_label($navKey)) ?>" placeholder="<?= h(NAV_DEFAULTS[$navKey]) ?>">
     <?php endforeach; ?>

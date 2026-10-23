@@ -11,7 +11,6 @@ const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
 const AVATAR_DIR = UPLOAD_DIR . '/avatars';
 const CONFIG_FILE = DATA_DIR . '/config.php';
-const SQLITE_FILE = DATA_DIR . '/app.sqlite';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = [
@@ -23,6 +22,7 @@ const ALLOWED_MIME = [
 const NAV_DEFAULTS = [
     'home' => '首页',
     'board' => '留言板',
+    'friends' => '好友',
     'album' => '我的相册',
     'memo' => '备忘录',
     'settings' => '设置',
@@ -555,4 +555,66 @@ function card_issue_auto(int $userId): string
         return $code;
     }
     return '';
+}
+
+function are_friends(int $a, int $b): bool
+{
+    if ($a === $b || $a <= 0 || $b <= 0) {
+        return false;
+    }
+    $stmt = db()->prepare('SELECT 1 FROM friends WHERE user_id = :user_id AND friend_id = :friend_id');
+    $stmt->execute([':user_id' => $a, ':friend_id' => $b]);
+    return $stmt->fetch() !== false;
+}
+
+function add_friendship(int $a, int $b): void
+{
+    if ($a === $b || $a <= 0 || $b <= 0) {
+        return;
+    }
+    $stmt = db()->prepare('INSERT IGNORE INTO friends (user_id, friend_id, created_at) VALUES (:user_id, :friend_id, :created_at)');
+    $now = now();
+    $stmt->execute([':user_id' => $a, ':friend_id' => $b, ':created_at' => $now]);
+    $stmt->execute([':user_id' => $b, ':friend_id' => $a, ':created_at' => $now]);
+}
+
+function remove_friendship(int $a, int $b): void
+{
+    $stmt = db()->prepare('DELETE FROM friends WHERE (user_id = :a AND friend_id = :b) OR (user_id = :b2 AND friend_id = :a2)');
+    $stmt->execute([':a' => $a, ':b' => $b, ':b2' => $b, ':a2' => $a]);
+}
+
+function friend_request_find(int $from, int $to): ?array
+{
+    $stmt = db()->prepare('SELECT * FROM friend_requests WHERE from_user_id = :from_user_id AND to_user_id = :to_user_id');
+    $stmt->execute([':from_user_id' => $from, ':to_user_id' => $to]);
+    $row = $stmt->fetch();
+    return is_array($row) ? $row : null;
+}
+
+function friends_of(int $uid): array
+{
+    $stmt = db()->prepare('
+        SELECT users.id, users.display_name, users.username, users.avatar, friends.created_at
+        FROM friends
+        JOIN users ON users.id = friends.friend_id
+        WHERE friends.user_id = :user_id
+        ORDER BY users.display_name ASC
+    ');
+    $stmt->execute([':user_id' => $uid]);
+    return $stmt->fetchAll();
+}
+
+function friend_unread_count(int $uid): int
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM private_messages WHERE receiver_id = :receiver_id AND is_read = 0');
+    $stmt->execute([':receiver_id' => $uid]);
+    return (int) $stmt->fetchColumn();
+}
+
+function friend_unread_between(int $uid, int $otherId): int
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM private_messages WHERE receiver_id = :receiver_id AND sender_id = :sender_id AND is_read = 0');
+    $stmt->execute([':receiver_id' => $uid, ':sender_id' => $otherId]);
+    return (int) $stmt->fetchColumn();
 }

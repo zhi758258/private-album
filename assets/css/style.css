@@ -760,9 +760,14 @@ button:active, .btn:active { transform: translateY(1px) scale(0.99); }
 .table tbody tr:hover { background: color-mix(in srgb, var(--theme-primary) 4.5%, transparent); }
 .table th { color: var(--ink); font-weight: 500; }
 .msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
     border-bottom: 1px solid var(--line);
     padding: 16px 0;
 }
+.msg .avatar { flex-shrink: 0; }
+.msg-main { flex: 1; min-width: 0; }
 .msg .who-line { color: var(--gold); margin-bottom: 6px; }
 .msg p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
 .msg.reply {
@@ -1332,4 +1337,118 @@ img.avatar { display: block; }
     .wrap { padding: 14px 14px calc(20px + env(safe-area-inset-bottom)); }
     .topbar { margin: 4px; padding: 0 10px; }
     .drawer { width: min(82vw, 320px); }
+}
+
+/* ===== 留言头像 ===== */
+.avatar-sm { width: 32px; height: 32px; font-size: 14px; }
+.avatar-md { width: 48px; height: 48px; font-size: 20px; }
+
+/* ===== 好友列表 ===== */
+.friend-list { display: flex; flex-direction: column; }
+.friend-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+}
+.friend-item:last-child { border-bottom: 0; }
+.friend-item .avatar { flex-shrink: 0; }
+.friend-info { flex: 1; min-width: 0; }
+.friend-name {
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.friend-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.friend-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.friend-actions form { margin: 0; }
+.friend-actions .btn { width: auto; padding: 8px 16px; margin: 0; }
+.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--line);
+}
+.tag-ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.nav-badge {
+    margin-left: auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--rose);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn .nav-badge { margin-left: 6px; }
+
+/* ===== 私信聊天 ===== */
+.chat-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.chat-peer { display: flex; align-items: center; gap: 12px; }
+.chat-box {
+    height: 60vh;
+    min-height: 320px;
+    overflow-y: auto;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.chat-line { display: flex; align-items: flex-end; gap: 10px; }
+.chat-line .avatar { flex-shrink: 0; }
+.chat-line.is-mine { justify-content: flex-end; }
+.chat-line.is-theirs { justify-content: flex-start; }
+.chat-bubble {
+    max-width: min(78%, 560px);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    border: 1px solid var(--line);
+}
+.chat-line.is-mine .chat-bubble {
+    background: color-mix(in srgb, var(--theme-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--theme-primary) 32%, transparent);
+}
+.chat-text { line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.chat-time { margin-top: 4px; font-size: 11px; color: var(--muted); text-align: right; }
+.chat-form textarea { min-height: 72px; margin-bottom: 10px; }
+
+@media (max-width: 640px) {
+    .chat-box { height: 56vh; }
+    .friend-item { flex-wrap: wrap; }
 }

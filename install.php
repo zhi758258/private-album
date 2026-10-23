@@ -2,9 +2,8 @@
 declare(strict_types=1);
 
 /**
- * 安装向导：连接独立 MySQL 服务器，建库（如有权限）、建表、创建管理员，
- * 并可选迁移旧 SQLite 数据（data/app.sqlite）。
- * 安装完成后请删除本文件，或保留（已安装时会拒绝重复执行）。
+ * 安装向导：连接独立 MySQL 服务器，建库（如有权限）、建表、创建管理员。
+ * 连接信息保存在 data/config.php，安装完成后请删除本文件。
  */
 session_start([
     'cookie_httponly' => true,
@@ -12,7 +11,6 @@ session_start([
 ]);
 
 const CONFIG_FILE = __DIR__ . '/data/config.php';
-const SQLITE_FILE = __DIR__ . '/data/app.sqlite';
 const SCHEMA_FILE = __DIR__ . '/schema.sql';
 
 function h(?string $value): string
@@ -61,120 +59,8 @@ function run_schema_file(PDO $pdo): void
     }
 }
 
-function sqlite_rows(PDO $sqlite, string $table): array
-{
-    try {
-        return $sqlite->query("SELECT * FROM {$table}")->fetchAll();
-    } catch (PDOException $e) {
-        return [];
-    }
-}
-
-function migrate_sqlite(PDO $mysql, PDO $sqlite): array
-{
-    $stats = [];
-
-    $users = sqlite_rows($sqlite, 'users');
-    $stats['users'] = count($users);
-    $ins = $mysql->prepare('INSERT IGNORE INTO users (id, username, password_hash, display_name, role, created_at) VALUES (:id, :username, :password_hash, :display_name, :role, :created_at)');
-    foreach ($users as $u) {
-        $ins->execute([
-            ':id' => (int) $u['id'],
-            ':username' => (string) $u['username'],
-            ':password_hash' => (string) $u['password_hash'],
-            ':display_name' => (string) $u['display_name'],
-            ':role' => $u['role'] === 'admin' ? 'admin' : 'user',
-            ':created_at' => (string) $u['created_at'],
-        ]);
-    }
-
-    $photos = sqlite_rows($sqlite, 'photos');
-    $stats['photos'] = count($photos);
-    $ins = $mysql->prepare('INSERT IGNORE INTO photos (id, user_id, filename, original_name, caption, created_at, on_wall) VALUES (:id, :user_id, :filename, :original_name, :caption, :created_at, :on_wall)');
-    foreach ($photos as $p) {
-        $ins->execute([
-            ':id' => (int) $p['id'],
-            ':user_id' => (int) $p['user_id'],
-            ':filename' => (string) $p['filename'],
-            ':original_name' => (string) $p['original_name'],
-            ':caption' => (string) ($p['caption'] ?? ''),
-            ':created_at' => (string) $p['created_at'],
-            ':on_wall' => (int) ($p['on_wall'] ?? 1),
-        ]);
-    }
-
-    $messages = sqlite_rows($sqlite, 'messages');
-    $stats['messages'] = count($messages);
-    $ins = $mysql->prepare('INSERT IGNORE INTO messages (id, user_id, parent_id, content, created_at) VALUES (:id, :user_id, :parent_id, :content, :created_at)');
-    foreach ($messages as $m) {
-        $ins->execute([
-            ':id' => (int) $m['id'],
-            ':user_id' => (int) $m['user_id'],
-            ':parent_id' => $m['parent_id'] !== null && $m['parent_id'] !== '' ? (int) $m['parent_id'] : null,
-            ':content' => (string) $m['content'],
-            ':created_at' => (string) $m['created_at'],
-        ]);
-    }
-
-    $memos = sqlite_rows($sqlite, 'memos');
-    $stats['memos'] = count($memos);
-    $ins = $mysql->prepare('INSERT IGNORE INTO memos (id, user_id, title, content, created_at, updated_at) VALUES (:id, :user_id, :title, :content, :created_at, :updated_at)');
-    foreach ($memos as $m) {
-        $ins->execute([
-            ':id' => (int) $m['id'],
-            ':user_id' => (int) $m['user_id'],
-            ':title' => (string) $m['title'],
-            ':content' => (string) $m['content'],
-            ':created_at' => (string) $m['created_at'],
-            ':updated_at' => (string) $m['updated_at'],
-        ]);
-    }
-
-    $likes = sqlite_rows($sqlite, 'photo_likes');
-    $stats['photo_likes'] = count($likes);
-    $ins = $mysql->prepare('INSERT IGNORE INTO photo_likes (photo_id, user_id, created_at) VALUES (:photo_id, :user_id, :created_at)');
-    foreach ($likes as $l) {
-        $ins->execute([
-            ':photo_id' => (int) $l['photo_id'],
-            ':user_id' => (int) $l['user_id'],
-            ':created_at' => (string) $l['created_at'],
-        ]);
-    }
-
-    $cards = sqlite_rows($sqlite, 'cards');
-    $stats['cards'] = count($cards);
-    $ins = $mysql->prepare('INSERT IGNORE INTO cards (id, code, created_by, used_by, created_at, used_at) VALUES (:id, :code, :created_by, :used_by, :created_at, :used_at)');
-    foreach ($cards as $c) {
-        $ins->execute([
-            ':id' => (int) $c['id'],
-            ':code' => (string) $c['code'],
-            ':created_by' => (int) $c['created_by'],
-            ':used_by' => $c['used_by'] !== null && $c['used_by'] !== '' ? (int) $c['used_by'] : null,
-            ':created_at' => (string) $c['created_at'],
-            ':used_at' => $c['used_at'] !== null && $c['used_at'] !== '' ? (string) $c['used_at'] : null,
-        ]);
-    }
-
-    $settings = sqlite_rows($sqlite, 'settings');
-    $stats['settings'] = count($settings);
-    $ins = $mysql->prepare('INSERT IGNORE INTO settings (`key`, `value`) VALUES (:key, :value)');
-    foreach ($settings as $s) {
-        $ins->execute([':key' => (string) $s['key'], ':value' => (string) $s['value']]);
-    }
-
-    foreach (['users', 'photos', 'messages', 'memos', 'cards'] as $table) {
-        $max = (int) $mysql->query("SELECT IFNULL(MAX(id), 0) + 1 FROM `{$table}`")->fetchColumn();
-        if ($max > 1) {
-            $mysql->exec("ALTER TABLE `{$table}` AUTO_INCREMENT = {$max}");
-        }
-    }
-
-    return $stats;
-}
-
 $errors = [];
 $done = false;
-$migrated = null;
 $installedAlready = install_done();
 
 if ($installedAlready) {
@@ -190,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass = (string) ($_POST['pass'] ?? '');
     $adminUser = trim((string) ($_POST['admin_user'] ?? ''));
     $adminPass = (string) ($_POST['admin_pass'] ?? '');
-    $migrate = isset($_POST['migrate']);
 
     if ($host === '' || $name === '' || $user === '' || $port < 1 || $port > 65535) {
         $errors[] = '请填写完整的数据库连接信息。';
@@ -221,18 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             run_schema_file($pdo);
         } catch (PDOException $e) {
             $errors[] = '建表失败：' . $e->getMessage();
-        }
-    }
-
-    if (!$errors && $migrate && is_file(SQLITE_FILE)) {
-        try {
-            $sqlite = new PDO('sqlite:' . SQLITE_FILE, null, null, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ]);
-            $migrated = migrate_sqlite($pdo, $sqlite);
-        } catch (PDOException $e) {
-            $errors[] = 'SQLite 数据迁移失败：' . $e->getMessage();
         }
     }
 
@@ -293,14 +166,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($done): ?>
             <div class="flash flash-ok">安装完成！请立即删除本文件（install.php）以保证安全。</div>
-            <?php if (is_array($migrated)): ?>
-                <div class="flash flash-ok">
-                    已迁移 SQLite 数据：
-                    <?php foreach ($migrated as $table => $count): ?>
-                        <?= h($table) ?> <?= (int) $count ?> 条；
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
             <a class="btn" href="/login.php">前往登录</a>
         <?php else: ?>
             <label for="host">MySQL 服务器地址（独立服务器 IP 或域名）</label>
@@ -323,13 +188,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <label for="admin_pass">管理员密码</label>
             <input id="admin_pass" name="admin_pass" type="password" required minlength="6" autocomplete="new-password">
-
-            <?php if (is_file(SQLITE_FILE)): ?>
-                <label class="check">
-                    <input type="checkbox" name="migrate" value="1" checked>
-                    迁移旧 SQLite 数据（留言、照片记录、卡密、设置等）
-                </label>
-            <?php endif; ?>
 
             <p class="hint" style="margin-top:4px;">
                 若数据库不存在，将尝试自动创建（需账号有 CREATE 权限）；无权限时请先在 MySQL 服务器上执行建库与授权语句。

@@ -31,7 +31,7 @@ $stmt->execute([':uid' => $user['id']]);
 $photos = $stmt->fetchAll();
 
 $rows = db()->query('
-    SELECT messages.*, users.display_name, users.id AS user_id
+    SELECT messages.*, users.display_name, users.id AS user_id, users.avatar
     FROM messages
     JOIN users ON users.id = messages.user_id
     ORDER BY messages.id ASC
@@ -58,14 +58,20 @@ render_header(nav_label('home'), $user, 'home');
 <?php else: ?>
     <?php foreach ($threads as $msg): ?>
         <article class="msg" id="msg-<?= (int) $msg['id'] ?>">
-            <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
-            <p><?= h($msg['content']) ?></p>
-            <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
-                <article class="msg reply">
-                    <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
-                    <p><?= h($reply['content']) ?></p>
-                </article>
-            <?php endforeach; ?>
+            <?= avatar_html($msg['avatar'] ?? null, $msg['display_name'], 'avatar avatar-sm') ?>
+            <div class="msg-main">
+                <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
+                <p><?= h($msg['content']) ?></p>
+                <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
+                    <article class="msg reply">
+                        <?= avatar_html($reply['avatar'] ?? null, $reply['display_name'], 'avatar avatar-sm') ?>
+                        <div class="msg-main">
+                            <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
+                            <p><?= h($reply['content']) ?></p>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
         </article>
     <?php endforeach; ?>
 <?php endif; ?>

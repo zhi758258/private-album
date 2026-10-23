@@ -12,6 +12,8 @@
 - 管理员可删除照片（带确认弹窗）
 - 管理员可自定义所有导航菜单名称
 - 管理员可使用文件管理：上传/下载任意格式文件，保存在 `wenjian123/`
+- 留言板（含首页留言）显示每位用户的头像
+- 好友功能：搜索用户、发送/处理好友请求，好友之间可互发私信
 
 ## 数据库：独立 MySQL 服务器
 
@@ -42,7 +44,6 @@ FLUSH PRIVILEGES;
 访问 `https://你的域名/install.php`，填写 MySQL 服务器地址、端口、库名、账号密码与管理员账号。
 
 - 若数据库不存在且账号有 CREATE 权限，会自动建库；
-- 若检测到旧版 `data/app.sqlite`，可勾选自动迁移全部数据（用户、留言、照片记录、卡密、设置）；
 - 安装完成后**立即删除 install.php**。
 
 安装向导会把连接信息写入 `data/config.php`（该目录已通过 `.htaccess` 禁止访问）。
@@ -84,3 +85,6 @@ mysql -h MySQL服务器地址 -u album_user -p private_album < schema.sql
 | settings | 站点设置（站名、公告、注册开关、导航名称等） |
 | photo_likes | 照片点赞 |
 | cards | 卡密（一次性、永久时效） |
+| friend_requests | 好友请求 |
+| friends | 好友关系（双向存储） |
+| private_messages | 好友私信 |

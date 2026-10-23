@@ -86,6 +86,46 @@ CREATE TABLE IF NOT EXISTS cards (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- 好友关系与私信
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS friend_requests (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    from_user_id INT UNSIGNED NOT NULL,
+    to_user_id INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_friend_requests_pair (from_user_id, to_user_id),
+    KEY idx_friend_requests_to (to_user_id),
+    CONSTRAINT fk_friend_requests_from FOREIGN KEY (from_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_friend_requests_to FOREIGN KEY (to_user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS friends (
+    user_id INT UNSIGNED NOT NULL,
+    friend_id INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (user_id, friend_id),
+    KEY idx_friends_friend (friend_id),
+    CONSTRAINT fk_friends_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_friends_friend FOREIGN KEY (friend_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS private_messages (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    sender_id INT UNSIGNED NOT NULL,
+    receiver_id INT UNSIGNED NOT NULL,
+    content TEXT NOT NULL,
+    is_read TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_private_messages_pair (sender_id, receiver_id),
+    KEY idx_private_messages_receiver (receiver_id, is_read),
+    CONSTRAINT fk_private_messages_sender FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_private_messages_receiver FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- 默认设置（INSERT IGNORE：已存在则跳过，不覆盖现有值）
 -- ============================================================
 
@@ -102,6 +142,7 @@ INSERT IGNORE INTO settings (`key`, `value`) VALUES
 INSERT IGNORE INTO settings (`key`, `value`) VALUES
     ('nav_home', '首页'),
     ('nav_board', '留言板'),
+    ('nav_friends', '好友'),
     ('nav_album', '我的相册'),
     ('nav_memo', '备忘录'),
     ('nav_settings', '设置'),

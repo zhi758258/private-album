@@ -5,10 +5,12 @@ function render_header(string $title, array $user, string $active = ''): void
 {
     $flash = flash_get();
     $isAdmin = $user['role'] === 'admin';
+    $friendUnread = friend_unread_count((int) $user['id']);
 
     $navIcons = [
         'home' => '<path d="M3 12 12 4l9 8M5 11v9h14v-9"/>',
         'board' => '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 10h8M8 13h5"/>',
+        'friends' => '<path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11a3 3 0 1 0 0-6"/><path d="M14.8 20a5.2 5.2 0 0 1 5.7-5.1"/>',
         'album' => '<path d="M4 5h16v14H4z"/><path d="M4 16l5-5 3 3 4-4 4 4"/><circle cx="8.5" cy="9" r="1.4"/>',
         'memo' => '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
         'admin' => '<path d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M16 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M14.5 20a5.5 5.5 0 0 1 6.5-5.2"/>',
@@ -22,6 +24,7 @@ function render_header(string $title, array $user, string $active = ''): void
     $baseNav = [
         ['key' => 'home', 'href' => '/index.php'],
         ['key' => 'board', 'href' => '/board.php'],
+        ['key' => 'friends', 'href' => '/friends.php'],
         ['key' => 'album', 'href' => '/album.php'],
         ['key' => 'memo', 'href' => '/memo.php'],
     ];
@@ -82,6 +85,9 @@ function render_header(string $title, array $user, string $active = ''): void
                     <a class="nav-item <?= $active === $k ? 'is-active' : '' ?>" href="<?= h($it['href']) ?>">
                         <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><?= $navIcons[$k] ?? '' ?></svg>
                         <span class="nav-label"><?= h(nav_label($k)) ?></span>
+                        <?php if ($k === 'friends' && $friendUnread > 0): ?>
+                            <span class="nav-badge"><?= (int) $friendUnread ?></span>
+                        <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
             </nav>
