@@ -8,9 +8,9 @@
     var uiMap = {
         lobby: 'ddzLobby', table: 'ddzTable', score: 'ddzScore', roomList: 'ddzRoomList',
         flash: 'ddzFlash', roomCode: 'ddzRoomCode', mult: 'ddzMult', phaseTip: 'ddzPhaseTip',
-        seatLeft: 'seatLeft', seatRight: 'seatRight',
+        seatLeft: 'seatLeft', seatRight: 'seatRight', meInfo: 'meInfo',
         playLeft: 'playLeft', playRight: 'playRight', playMe: 'playMe',
-        bottom: 'ddzBottom', turn: 'ddzTurn', meInfo: 'meInfo', myHand: 'myHand',
+        bottom: 'ddzBottom', turn: 'ddzTurn', myHand: 'myHand',
         myActions: 'myActions', over: 'ddzOver', overTitle: 'ddzOverTitle', overBody: 'ddzOverBody'
     };
     Object.keys(uiMap).forEach(function (k) { ui[k] = document.getElementById(uiMap[k]); });
@@ -158,22 +158,41 @@
         return null;
     }
 
-    function renderPlayer(el, s, d) {
+    function backStack(n) {
+        var show = Math.min(Math.max(n, 0), 8);
+        var html = '<div class="ddz-backs">';
+        for (var i = 0; i < show; i++) { html += '<span class="dcard-back"></span>'; }
+        html += '<span class="ddz-back-n">' + n + '</span></div>';
+        return html;
+    }
+    function roleText(d, s) {
+        if (d.phase === 'waiting' || d.phase === 'bid') { return '玩家'; }
+        return d.landlord === s ? '地主' : '农民';
+    }
+    function renderSeat(el, s, d, isMe) {
         if (!el) { return; }
         var p = d.players[s];
         if (!p) { el.innerHTML = ''; return; }
-        var isLandlord = d.landlord === s;
+        var isLandlord = d.landlord === s && d.phase !== 'waiting' && d.phase !== 'bid';
         var active = (d.phase === 'bid' && d.bidTurn === s) || (d.phase === 'play' && d.turn === s);
         var bubble = bubbleFor(s, d);
+        var count = d.handCounts ? (d.handCounts[s] || 0) : 0;
         el.innerHTML =
             '<div class="ddz-player-card' + (active ? ' is-active' : '') + '">' +
-            '<div style="position:relative">' + (isLandlord ? '<span class="ddz-crown">👑</span>' : '') + avatarHTML(p, s) + '</div>' +
-            '<span class="ddz-p-name">' + esc(p.name) + '</span>' +
-            '<span class="ddz-p-role' + (isLandlord ? ' is-landlord' : '') + '">' + (isLandlord ? '地主' : '农民') + '</span>' +
-            '<span class="ddz-p-count">🂠 剩 ' + d.handCounts[s] + ' 张</span>' +
+            '<div class="ddz-avatar-wrap">' +
+            (isLandlord ? '<span class="ddz-crown"></span>' : '') +
+            (active ? '<span class="ddz-clock"></span>' : '') +
+            avatarHTML(p, s) +
+            '</div>' +
+            '<div class="ddz-p-meta">' +
+            '<span class="ddz-p-name">' + esc(p.name) + (isMe ? '（你）' : '') + '</span>' +
+            '<span class="ddz-p-role' + (isLandlord ? ' is-landlord' : '') + '">' + roleText(d, s) + '</span>' +
+            (isMe || d.phase === 'waiting' ? '' : backStack(count)) +
+            '</div>' +
             (bubble ? '<span class="ddz-bubble ' + bubble.cls + '">' + bubble.text + '</span>' : '') +
             '</div>';
     }
+    function renderPlayer(el, s, d) { renderSeat(el, s, d, false); }
 
     function renderPlayGroup(el, s, d) {
         if (!el) { return; }
@@ -187,13 +206,7 @@
     }
 
     function renderMeInfo(d) {
-        var p = d.players[d.mySeat];
-        if (!ui.meInfo || !p) { return; }
-        var isLandlord = d.landlord === d.mySeat;
-        ui.meInfo.innerHTML = (isLandlord ? '<span class="ddz-crown" style="position:static;transform:none">👑</span>' : '') +
-            avatarHTML(p, d.mySeat) +
-            '<span class="ddz-p-name">' + esc(p.name) + '（你）</span>' +
-            '<span class="ddz-p-role' + (isLandlord ? ' is-landlord' : '') + '">' + (isLandlord ? '地主' : '农民') + '</span>';
+        renderSeat(ui.meInfo, d.mySeat, d, true);
     }
 
     function renderHand(d) {
@@ -203,10 +216,14 @@
 
     function renderBottom(d) {
         if (!ui.bottom) { return; }
-        if (d.phase === 'over' && d.bottom && d.bottom.length) {
-            ui.bottom.innerHTML = '<span class="ddz-bottom-label">底牌</span>' + d.bottom.map(function (id) { return dcard(id, 'dcard-mini'); }).join('');
-        } else {
+        if (d.phase === 'waiting' || !d.bottom || !d.bottom.length) {
             ui.bottom.innerHTML = '';
+            return;
+        }
+        if (d.bottomRevealed) {
+            ui.bottom.innerHTML = d.bottom.map(function (id) { return dcard(id, 'dcard-mini'); }).join('');
+        } else {
+            ui.bottom.innerHTML = '<span class="dcard-backface"></span><span class="dcard-backface"></span><span class="dcard-backface"></span>';
         }
     }
 
@@ -274,7 +291,7 @@
         ui.over.hidden = false;
         var landlord = d.landlord;
         var myWin = (d.winner === landlord) === (landlord === d.mySeat);
-        ui.overTitle.textContent = myWin ? '🎉 你赢了' : '😵 你输了';
+        ui.overTitle.textContent = myWin ? '你赢了' : '你输了';
         var rows = d.players.map(function (p) {
             var delta = p.last_delta || 0;
             return '<div class="ddz-over-row"><span>' + esc(p.name) + (p.is_ai ? '（AI）' : '') + '</span>' +

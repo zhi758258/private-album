@@ -42,22 +42,24 @@ render_header(nav_label('ddz'), $user, 'ddz');
             <span class="ddz-chip" id="ddzPhaseTip"></span>
             <button type="button" class="ddz-mini" id="btnLeave">退出房间</button>
         </div>
-        <div class="ddz-stage">
-            <div class="ddz-player ddz-p-left" id="seatLeft"></div>
-            <div class="ddz-center-play">
-                <div class="ddz-play-group" id="playLeft"></div>
-                <div class="ddz-play-group" id="playRight"></div>
-                <div class="ddz-play-group" id="playMe"></div>
+        <div class="ddz-arena">
+            <div class="ddz-felt">
+                <div class="ddz-felt-ring"></div>
+                <div class="ddz-felt-logo">欢乐斗地主</div>
                 <div class="ddz-bottom-cards" id="ddzBottom"></div>
+                <div class="ddz-turn" id="ddzTurn"></div>
             </div>
-            <div class="ddz-player ddz-p-right" id="seatRight"></div>
-            <div class="ddz-turn" id="ddzTurn"></div>
+            <div class="ddz-seat ddz-seat-left" id="seatLeft"></div>
+            <div class="ddz-seat ddz-seat-right" id="seatRight"></div>
+            <div class="ddz-play ddz-play-left" id="playLeft"></div>
+            <div class="ddz-play ddz-play-right" id="playRight"></div>
+            <div class="ddz-play ddz-play-me" id="playMe"></div>
+            <div class="ddz-seat ddz-seat-me" id="meInfo"></div>
         </div>
-        <div class="ddz-me-area">
-            <div class="ddz-me-info" id="meInfo"></div>
+        <div class="ddz-dock">
+            <div class="ddz-actions" id="myActions"></div>
             <div class="ddz-myhand" id="myHand"></div>
         </div>
-        <div class="ddz-actions" id="myActions"></div>
     </section>
 
     <div class="ddz-over-mask" id="ddzOver" hidden>

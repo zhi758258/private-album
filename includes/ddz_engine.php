@@ -702,8 +702,14 @@ function ddz_public_state(array $state, int $viewerSeat): array
     $out['mySeat'] = $viewerSeat;
     $out['myHand'] = $viewerSeat >= 0 && isset($state['hands'][$viewerSeat]) ? $state['hands'][$viewerSeat] : [];
     unset($out['hands']);
-    if ($state['phase'] !== 'over') {
+    if ($state['phase'] === 'waiting') {
         $out['bottom'] = [];
+        $out['bottomRevealed'] = false;
+    } elseif ($state['phase'] === 'bid') {
+        $out['bottom'] = [0, 0, 0];
+        $out['bottomRevealed'] = false;
+    } else {
+        $out['bottomRevealed'] = true;
     }
     return $out;
 }
