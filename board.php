@@ -66,7 +66,7 @@ render_header(nav_label('board'), $user, 'board');
 <form class="panel" method="post">
     <?= csrf_field() ?>
     <label for="content">写一条留言</label>
-    <textarea id="content" name="content" maxlength="1000" required placeholder="最多 1000 字"></textarea>
+    <textarea id="content" name="content" maxlength="1000" required placeholder="最多 1000 字，可点表情或打字搜表情" data-emoji></textarea>
     <button type="submit">发布</button>
 </form>
 <?php if (!$threads): ?>
@@ -79,7 +79,7 @@ render_header(nav_label('board'), $user, 'board');
             </button>
             <div class="msg-main">
                 <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
-                <p><?= h($msg['content']) ?></p>
+                <p class="msg-text"><?= render_message_html($msg['content']) ?></p>
                 <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
                     <article class="msg reply">
                         <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $reply['user_id'] ?>">
@@ -87,14 +87,14 @@ render_header(nav_label('board'), $user, 'board');
                         </button>
                         <div class="msg-main">
                             <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
-                            <p><?= h($reply['content']) ?></p>
+                            <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
                         </div>
                     </article>
                 <?php endforeach; ?>
                 <form class="reply-form" method="post">
                     <?= csrf_field() ?>
                     <input type="hidden" name="parent_id" value="<?= (int) $msg['id'] ?>">
-                    <textarea name="content" maxlength="1000" required placeholder="回复 <?= h($msg['display_name']) ?>"></textarea>
+                    <textarea name="content" maxlength="1000" required placeholder="回复 <?= h($msg['display_name']) ?>" data-emoji></textarea>
                     <button type="submit">回复</button>
                 </form>
             </div>

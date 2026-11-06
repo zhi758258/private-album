@@ -62,6 +62,7 @@ function render_header(string $title, array $user, string $active = ''): void
     <title><?= h($title) ?> · <?= h(app_name()) ?></title>
     <meta name="csrf-token" content="<?= h(csrf_token()) ?>">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/js/emoji.js" defer></script>
 </head>
 <body>
     <div class="grain"></div>

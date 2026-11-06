@@ -84,7 +84,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
             <div class="chat-line <?= $mine ? 'is-mine' : 'is-theirs' ?>" data-id="<?= (int) $m['id'] ?>">
                 <?php if (!$mine): ?><?= $otherAvatar ?><?php endif; ?>
                 <div class="chat-bubble">
-                    <div class="chat-text"><?= nl2br(h($m['content'])) ?></div>
+                    <div class="chat-text"><?= render_message_html($m['content']) ?></div>
                     <div class="chat-time"><?= h($m['created_at']) ?></div>
                 </div>
                 <?php if ($mine): ?><?= $selfAvatar ?><?php endif; ?>
@@ -95,7 +95,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
 
 <form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>">
     <?= csrf_field() ?>
-    <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，回车发送" aria-label="消息内容"></textarea>
+    <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
     <button type="submit">发送</button>
 </form>
 <script>
@@ -125,7 +125,8 @@ window.CHAT = {
         bubble.className = 'chat-bubble';
         var text = document.createElement('div');
         text.className = 'chat-text';
-        text.textContent = msg.content;
+        if (window.Emoji && window.Emoji.render) text.innerHTML = window.Emoji.render(msg.content);
+        else text.textContent = msg.content;
         bubble.appendChild(text);
         var time = document.createElement('div');
         time.className = 'chat-time';

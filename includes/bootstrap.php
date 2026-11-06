@@ -637,3 +637,5 @@ function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool
     }
     return are_friends($viewerId, $targetId);
 }
+
+require_once __DIR__ . '/emoji.php';

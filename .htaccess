@@ -8,6 +8,6 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^$ /index.php [L]
 </IfModule>
 
-<FilesMatch "^(bootstrap|layout)\.php$">
+<FilesMatch "^(bootstrap|layout|emoji|schema|ddz_engine)\.php$">
 Require all denied
 </FilesMatch>

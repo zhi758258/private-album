@@ -63,7 +63,7 @@ render_header(nav_label('home'), $user, 'home');
             </button>
             <div class="msg-main">
                 <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
-                <p><?= h($msg['content']) ?></p>
+                <p class="msg-text"><?= render_message_html($msg['content']) ?></p>
                 <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
                     <article class="msg reply">
                         <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $reply['user_id'] ?>">
@@ -71,7 +71,7 @@ render_header(nav_label('home'), $user, 'home');
                         </button>
                         <div class="msg-main">
                             <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
-                            <p><?= h($reply['content']) ?></p>
+                            <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
                         </div>
                     </article>
                 <?php endforeach; ?>
