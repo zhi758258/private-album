@@ -58,7 +58,7 @@ function render_header(string $title, array $user, string $active = ''): void
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
     <title><?= h($title) ?> · <?= h(app_name()) ?></title>
     <meta name="csrf-token" content="<?= h(csrf_token()) ?>">
     <link rel="stylesheet" href="/assets/css/style.css">
@@ -453,16 +453,26 @@ function render_footer(): void
         })();
         (function () {
             var sy = 0, pulling = false, sup = false;
+            var wrap = document.querySelector('.wrap');
+            function pageTop() {
+                if (wrap) return wrap.scrollTop;
+                return window.scrollY || document.documentElement.scrollTop || 0;
+            }
+            function insideEmoji(el) {
+                return !!(el && el.closest && el.closest('.emoji-panel, .emoji-suggest, .emoji-grid, .emoji-suggest-row, .emoji-item, .emoji-bar'));
+            }
             function onTouchStart(e) {
-                if (window.scrollY > 0) { sup = false; return; }
+                if (insideEmoji(e.target)) { pulling = false; sup = false; return; }
+                if (pageTop() > 0) { pulling = false; sup = false; return; }
                 sy = e.touches[0].clientY;
                 pulling = true;
                 sup = false;
             }
             function onTouchMove(e) {
                 if (!pulling) return;
+                if (insideEmoji(e.target)) { pulling = false; return; }
                 var dy = e.touches[0].clientY - sy;
-                if (dy > 70 && window.scrollY <= 0 && !sup) {
+                if (dy > 70 && pageTop() <= 0 && !sup) {
                     sup = true;
                     try { sessionStorage.setItem('pr', '1'); } catch (err) {}
                     location.reload();

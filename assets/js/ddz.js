@@ -11,7 +11,8 @@
         seatLeft: 'seatLeft', seatRight: 'seatRight', meInfo: 'meInfo',
         playLeft: 'playLeft', playRight: 'playRight', playMe: 'playMe',
         bottom: 'ddzBottom', turn: 'ddzTurn', myHand: 'myHand',
-        myActions: 'myActions', over: 'ddzOver', overTitle: 'ddzOverTitle', overBody: 'ddzOverBody'
+        myActions: 'myActions', over: 'ddzOver', overTitle: 'ddzOverTitle', overBody: 'ddzOverBody',
+        rotateTip: 'ddzRotateTip'
     };
     Object.keys(uiMap).forEach(function (k) { ui[k] = document.getElementById(uiMap[k]); });
 
@@ -51,7 +52,8 @@
             return '<span class="' + cls + ' dcard-joker' + (r === 17 ? ' is-big' : '') + '" data-id="' + id + '"><span class="dcard-rank">' + rankText(r) + '</span></span>';
         }
         var red = (s === 1 || s === 3);
-        return '<span class="' + cls + (red ? ' is-red' : '') + '" data-id="' + id + '"><span class="dcard-rank">' + rankText(r) + '</span><span class="dcard-suit">' + SUITS[s] + '</span></span>';
+        var suit = SUITS[s];
+        return '<span class="' + cls + (red ? ' is-red' : '') + '" data-id="' + id + '"><span class="dcard-tl"><span class="dcard-rank">' + rankText(r) + '</span><span class="dcard-suit">' + suit + '</span></span><span class="dcard-face">' + suit + '</span></span>';
     }
     function faceSVG(seed) {
         var f = FACES[Math.abs(seed) % FACES.length];
@@ -118,14 +120,70 @@
             }).join('');
         });
     }
+    function isPhone() {
+        return window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 900px)').matches;
+    }
+    function portraitNow() {
+        return window.innerHeight > window.innerWidth + 24;
+    }
+    function syncRotateTip() {
+        if (!ui.rotateTip) { return; }
+        var show = isPhone() && !!state.code && portraitNow();
+        ui.rotateTip.hidden = !show;
+    }
+    function lockLand() {
+        if (!isPhone()) { return; }
+        document.documentElement.classList.add('ddz-ls');
+        document.body.classList.add('ddz-ls');
+        var o = screen.orientation;
+        if (o && o.lock) {
+            o.lock('landscape').catch(function () {});
+        } else if (screen.lockOrientation) {
+            try { screen.lockOrientation('landscape'); } catch (e) {}
+        }
+        syncRotateTip();
+        setTimeout(fitHand, 60);
+    }
+    function unlockLand() {
+        document.documentElement.classList.remove('ddz-ls');
+        document.body.classList.remove('ddz-ls');
+        if (ui.rotateTip) { ui.rotateTip.hidden = true; }
+        var o = screen.orientation;
+        if (o && o.unlock) {
+            try { o.unlock(); } catch (e) {}
+        }
+    }
+    function fitHand() {
+        var el = ui.myHand;
+        if (!el) { return; }
+        var cards = el.querySelectorAll('.dcard');
+        var n = cards.length;
+        if (n < 2) {
+            el.style.setProperty('--ddz-overlap', '0px');
+            return;
+        }
+        var w = el.clientWidth || (el.parentNode && el.parentNode.clientWidth) || window.innerWidth;
+        var cardW = cards[0].offsetWidth || 46;
+        var need = (n * cardW - w) / (n - 1);
+        if (need < 16) { need = 16; }
+        if (need > cardW - 14) { need = cardW - 14; }
+        el.style.setProperty('--ddz-overlap', '-' + Math.round(need) + 'px');
+    }
+    function leaveRoom() {
+        var code = state.code;
+        showLobby();
+        if (code) { post('leave', { code: code }); }
+    }
     function showLobby() {
         stopPoll();
+        unlockLand();
         state.code = ''; state.seat = -1; state.data = null; state.selected = {};
         ui.table.hidden = true; ui.lobby.hidden = false; ui.over.hidden = true;
         loadScore(); loadRooms();
     }
     function enterRoom(code) {
         state.code = code; ui.lobby.hidden = true; ui.table.hidden = false; ui.over.hidden = true;
+        lockLand();
         poll(true);
     }
     function stopPoll() { if (state.timer) { clearTimeout(state.timer); state.timer = null; } }
@@ -212,6 +270,7 @@
     function renderHand(d) {
         var ids = (d.myHand || []).slice().sort(function (a, b) { return b - a; });
         ui.myHand.innerHTML = ids.map(function (id) { return dcard(id, state.selected[id] ? 'is-selected' : ''); }).join('');
+        requestAnimationFrame(fitHand);
     }
 
     function renderBottom(d) {
@@ -382,9 +441,9 @@
         if (!b) { return; }
         post('join', { code: b.getAttribute('data-join') }).then(function (r) { if (r.ok) { enterRoom(r.code); } else { flash(r.error || '加入失败', false); } });
     });
-    document.getElementById('btnLeave').addEventListener('click', function () {
-        post('leave', { code: state.code }).then(function () { showLobby(); });
-    });
+    document.getElementById('btnLeave').addEventListener('click', leaveRoom);
+    var btnLeaveRotate = document.getElementById('btnLeaveRotate');
+    if (btnLeaveRotate) { btnLeaveRotate.addEventListener('click', leaveRoom); }
     document.getElementById('btnAgain').addEventListener('click', function () {
         post('restart', { code: state.code }).then(function (r) {
             ui.over.hidden = true;
@@ -392,8 +451,13 @@
             poll(true);
         });
     });
-    document.getElementById('btnBackLobby').addEventListener('click', function () {
-        post('leave', { code: state.code }).then(function () { showLobby(); });
+    document.getElementById('btnBackLobby').addEventListener('click', leaveRoom);
+
+    window.addEventListener('resize', function () { syncRotateTip(); fitHand(); });
+    window.addEventListener('orientationchange', function () { setTimeout(function () { syncRotateTip(); fitHand(); }, 80); });
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden || !state.code) { return; }
+        lockLand();
     });
 
     loadScore();

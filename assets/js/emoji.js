@@ -145,9 +145,28 @@
         b.className = 'emoji-item' + (item.kind === 'sticker' ? ' is-sticker' : '');
         b.title = item.name || '';
         b.innerHTML = faceHtml(item);
-        b.addEventListener('click', function (e) {
+        var sx = 0;
+        var sy = 0;
+        var armed = false;
+        function choose(e) {
             e.preventDefault();
+            e.stopPropagation();
+            if (armed) return;
+            armed = true;
             onPick(item);
+            setTimeout(function () { armed = false; }, 360);
+        }
+        b.addEventListener('click', choose);
+        b.addEventListener('touchstart', function (e) {
+            var t = e.changedTouches[0];
+            sx = t.clientX;
+            sy = t.clientY;
+        }, { passive: true });
+        b.addEventListener('touchend', function (e) {
+            var t = e.changedTouches[0];
+            if (Math.abs(t.clientX - sx) < 14 && Math.abs(t.clientY - sy) < 14) {
+                choose(e);
+            }
         });
         return b;
     }
@@ -208,7 +227,22 @@
         var sugSeq = 0;
         var sugItems = [];
 
-        function hideSuggest() { suggest.hidden = true; suggest.innerHTML = ''; sugItems = []; }
+        function isSheet() {
+            return window.matchMedia('(max-width: 900px)').matches;
+        }
+        function syncDock() {
+            var home = isSheet() ? document.body : wrap;
+            if (panel.parentNode !== home) home.appendChild(panel);
+            if (suggest.parentNode !== home) home.appendChild(suggest);
+            document.body.classList.toggle('emoji-open', isSheet() && (!panel.hidden || !suggest.hidden));
+        }
+
+        function hideSuggest() {
+            suggest.hidden = true;
+            suggest.innerHTML = '';
+            sugItems = [];
+            syncDock();
+        }
         function setTab(next) {
             pack = next;
             tabBtns.forEach(function (x) {
@@ -223,6 +257,7 @@
         function closePanel() {
             panel.hidden = true;
             syncButtons();
+            syncDock();
         }
         function openPanel(nextPack, focusSearch) {
             if (nextPack) setTab(nextPack);
@@ -230,6 +265,7 @@
             hideSuggest();
             paint();
             syncButtons();
+            syncDock();
             if (focusSearch) {
                 search.value = '';
                 search.focus();
@@ -318,6 +354,7 @@
             sugItems.forEach(function (it) { row.appendChild(itemBtn(it, pickReplace)); });
             suggest.appendChild(row);
             suggest.hidden = false;
+            syncDock();
         }
         function pick(item) {
             var token = item.token || '';
@@ -336,6 +373,19 @@
             closePanel();
             hideSuggest();
         }
+
+        function isolateTouch(el) {
+            if (!el) return;
+            el.addEventListener('touchmove', function (e) {
+                e.stopPropagation();
+            }, { passive: true });
+            el.addEventListener('wheel', function (e) {
+                e.stopPropagation();
+            }, { passive: true });
+        }
+        isolateTouch(panel);
+        isolateTouch(grid);
+        isolateTouch(suggest);
 
         tabBtns.forEach(function (b) {
             b.addEventListener('click', function () {
@@ -368,11 +418,12 @@
             else openPanel('net', true);
         });
         document.addEventListener('click', function (e) {
-            if (!wrap.contains(e.target)) {
-                closePanel();
-                hideSuggest();
-            }
+            var t = e.target;
+            if (wrap.contains(t) || panel.contains(t) || suggest.contains(t)) return;
+            closePanel();
+            hideSuggest();
         });
+        window.addEventListener('resize', syncDock);
 
         function maybeSuggest() {
             if (!panel.hidden) return;

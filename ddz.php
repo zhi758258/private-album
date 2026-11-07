@@ -40,7 +40,7 @@ render_header(nav_label('ddz'), $user, 'ddz');
             <span class="ddz-chip" id="ddzRoomCode"></span>
             <span class="ddz-chip" id="ddzMult"></span>
             <span class="ddz-chip" id="ddzPhaseTip"></span>
-            <button type="button" class="ddz-mini" id="btnLeave">退出房间</button>
+            <button type="button" class="ddz-mini ddz-leave" id="btnLeave">退出房间</button>
         </div>
         <div class="ddz-arena">
             <div class="ddz-felt">
@@ -62,6 +62,13 @@ render_header(nav_label('ddz'), $user, 'ddz');
         </div>
     </section>
 
+    <div class="ddz-rotate-tip" id="ddzRotateTip" hidden>
+        <div class="ddz-rotate-card">
+            <div class="ddz-rotate-phone" aria-hidden="true"></div>
+            <p>请将手机横过来打牌</p>
+            <button type="button" class="ddz-btn" id="btnLeaveRotate">退出房间</button>
+        </div>
+    </div>
     <div class="ddz-over-mask" id="ddzOver" hidden>
         <div class="ddz-over-card">
             <h2 id="ddzOverTitle">对局结束</h2>

@@ -115,6 +115,12 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .ddz-topbar .ddz-mini { margin-left: auto; background: rgba(255, 255, 255, 0.9); }
+.ddz-leave {
+    background: linear-gradient(180deg, #ff8a7a, #d63f3f);
+    color: #fff;
+    border: 0;
+    box-shadow: 0 3px 0 #9e2424;
+}
 
 .ddz-arena {
     position: relative;
@@ -194,16 +200,18 @@
     position: absolute;
     z-index: 3;
     display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: flex-end;
     justify-content: center;
     min-height: 48px;
-    max-width: 42%;
+    max-width: 46%;
 }
-.ddz-play-left { left: 20%; top: 36%; justify-content: flex-start; }
-.ddz-play-right { right: 20%; top: 36%; justify-content: flex-end; }
-.ddz-play-me { left: 50%; bottom: 16%; transform: translateX(-50%); max-width: 70%; }
+.ddz-play .dcard { margin-left: -14px; }
+.ddz-play .dcard:first-child { margin-left: 0; }
+.ddz-play-left { left: 18%; top: 38%; justify-content: flex-start; }
+.ddz-play-right { right: 18%; top: 38%; justify-content: flex-end; }
+.ddz-play-me { left: 50%; bottom: 14%; transform: translateX(-50%); max-width: 72%; }
 
 .ddz-player-card {
     display: flex;
@@ -337,34 +345,70 @@
 .ddz-actions { display: flex; gap: 12px; margin: 0 0 8px; flex-wrap: wrap; align-items: center; justify-content: center; min-height: 48px; }
 .ddz-waiting { color: #fff; font-size: 14px; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
 .ddz-my-turn { color: #ffe08a; font-weight: 700; }
-.ddz-myhand { display: flex; flex-wrap: nowrap; justify-content: center; padding-top: 22px; overflow-x: auto; }
+.ddz-myhand {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 26px 4px 2px;
+    overflow: visible;
+    min-height: 86px;
+}
 
-/* 牌 */
+/* 牌：角标点数 + 右下花色，贴近腾讯斗地主 */
 .dcard {
     position: relative;
     display: inline-flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-start;
     width: 54px;
-    height: 74px;
-    background: #fff;
-    color: #23262d;
-    border: 1.5px solid #b9bec7;
-    border-radius: 8px;
+    height: 76px;
+    padding: 3px 0 0 5px;
+    background: linear-gradient(180deg, #fffef8 0%, #f3f5fa 100%);
+    color: #1c1f24;
+    border: 1.5px solid #c5cad3;
+    border-radius: 7px;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.28);
     font-weight: 800;
     user-select: none;
+    touch-action: manipulation;
     transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 .dcard.is-red { color: #e0322b; }
-.dcard-rank { font-size: 20px; line-height: 1; }
-.dcard-suit { font-size: 17px; line-height: 1; }
-.dcard-joker .dcard-rank { font-size: 13px; writing-mode: vertical-rl; letter-spacing: 2px; }
+.dcard-tl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    z-index: 1;
+}
+.dcard-rank { font-size: 16px; line-height: 1; font-family: "DIN Alternate", "Arial Narrow", "Songti SC", sans-serif; }
+.dcard-suit { font-size: 13px; line-height: 1.1; }
+.dcard-face {
+    position: absolute;
+    right: 5px;
+    bottom: 4px;
+    font-size: 22px;
+    line-height: 1;
+    pointer-events: none;
+}
+.dcard-joker {
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.dcard-joker .dcard-rank {
+    font-size: 13px;
+    writing-mode: vertical-rl;
+    letter-spacing: 2px;
+}
+.dcard-joker .dcard-face { display: none; }
 .dcard-joker.is-big { color: #e0322b; }
-.dcard-mini { width: 34px; height: 48px; border-radius: 6px; }
-.dcard-mini .dcard-rank { font-size: 13px; }
-.dcard-mini .dcard-suit { font-size: 12px; }
+.dcard-mini { width: 32px; height: 46px; border-radius: 5px; padding: 2px 0 0 3px; }
+.dcard-mini .dcard-rank { font-size: 12px; }
+.dcard-mini .dcard-suit { font-size: 10px; }
+.dcard-mini .dcard-face { font-size: 13px; right: 3px; bottom: 2px; }
 .dcard-mini.dcard-joker .dcard-rank { font-size: 9px; letter-spacing: 1px; }
 .dcard-backface {
     width: 34px;
@@ -378,10 +422,10 @@
 }
 .ddz-play .dcard { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
 
-.ddz-myhand .dcard { margin-left: -22px; cursor: pointer; flex-shrink: 0; }
+.ddz-myhand .dcard { margin-left: var(--ddz-overlap, -22px); cursor: pointer; flex-shrink: 0; }
 .ddz-myhand .dcard:first-child { margin-left: 0; }
-.ddz-myhand .dcard:hover { transform: translateY(-8px); }
-.ddz-myhand .dcard.is-selected { transform: translateY(-22px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35); border-color: #ffd34d; }
+.ddz-myhand .dcard:hover { transform: translateY(-8px); z-index: 2; }
+.ddz-myhand .dcard.is-selected { transform: translateY(-22px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35); border-color: #ffd34d; z-index: 3; }
 
 .ddz-over-mask {
     position: fixed;
@@ -430,10 +474,203 @@
     .ddz-play-left { left: 8%; top: 34%; max-width: 46%; }
     .ddz-play-right { right: 8%; top: 34%; max-width: 46%; }
     .ddz-play-me { bottom: 12%; }
-    .dcard { width: 42px; height: 60px; }
-    .dcard-rank { font-size: 16px; }
-    .dcard-suit { font-size: 14px; }
-    .ddz-myhand .dcard { margin-left: -26px; }
+    .dcard { width: 42px; height: 62px; }
+    .dcard-rank { font-size: 14px; }
+    .dcard-suit { font-size: 11px; }
+    .dcard-face { font-size: 16px; }
     .ddz-player-card { min-width: 78px; padding: 6px 7px; }
     .ddz-avatar { width: 48px; height: 48px; }
+}
+
+/* 手机对局：腾讯欢乐斗地主横屏牌桌 */
+html.ddz-ls,
+html.ddz-ls body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    overscroll-behavior: none;
+}
+html.ddz-ls .drawer,
+html.ddz-ls .nav-mask,
+html.ddz-ls .grain,
+html.ddz-ls .foot,
+html.ddz-ls .topbar { display: none !important; }
+html.ddz-ls .main-col { height: 100%; }
+html.ddz-ls .wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    overflow: hidden;
+    touch-action: manipulation;
+}
+html.ddz-ls .ddz {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+html.ddz-ls .wrap { height: 100%; }
+html.ddz-ls .ddz-table {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    border-radius: 0;
+    border-width: 0;
+    padding: 4px 6px 0;
+}
+html.ddz-ls .ddz-topbar { margin-bottom: 2px; gap: 6px; position: relative; z-index: 12; }
+html.ddz-ls .ddz-chip { padding: 3px 8px; font-size: 11px; }
+html.ddz-ls .ddz-leave {
+    min-height: 36px;
+    min-width: 84px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+html.ddz-ls .ddz-arena { min-height: 0; overflow: visible; }
+html.ddz-ls .ddz-felt { left: 16%; right: 16%; top: 10%; bottom: 8%; }
+html.ddz-ls .ddz-felt-logo { font-size: 18px; }
+html.ddz-ls .ddz-bottom-cards { top: 8%; }
+html.ddz-ls .ddz-turn { top: 52%; font-size: 13px; }
+html.ddz-ls .ddz-seat-left {
+    top: 50%;
+    left: 6px;
+    transform: translateY(-70%);
+}
+html.ddz-ls .ddz-seat-right {
+    top: 50%;
+    right: 6px;
+    transform: translateY(-70%);
+}
+html.ddz-ls .ddz-table { position: relative; overflow: hidden; }
+html.ddz-ls .ddz-arena { overflow: visible; }
+html.ddz-ls .ddz-seat-me {
+    position: absolute;
+    left: 8px;
+    top: auto;
+    bottom: 8px;
+    transform: none;
+    margin-top: 0;
+    z-index: 8;
+    pointer-events: auto;
+}
+html.ddz-ls .ddz-seat-left .ddz-player-card,
+html.ddz-ls .ddz-seat-right .ddz-player-card {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    padding: 6px 8px;
+    gap: 8px;
+}
+html.ddz-ls .ddz-seat-right .ddz-player-card { flex-direction: row-reverse; }
+html.ddz-ls .ddz-seat-left .ddz-p-meta,
+html.ddz-ls .ddz-seat-right .ddz-p-meta { align-items: flex-start; }
+html.ddz-ls .ddz-seat-right .ddz-p-meta { align-items: flex-end; }
+html.ddz-ls .ddz-seat-left .ddz-backs,
+html.ddz-ls .ddz-seat-right .ddz-backs {
+    flex-direction: column;
+    height: auto;
+    width: 26px;
+    align-items: center;
+}
+html.ddz-ls .ddz-seat-left .ddz-backs .dcard-back,
+html.ddz-ls .ddz-seat-right .ddz-backs .dcard-back {
+    width: 22px;
+    height: 30px;
+    margin-left: 0;
+    margin-top: -16px;
+}
+html.ddz-ls .ddz-seat-left .ddz-backs .dcard-back:first-child,
+html.ddz-ls .ddz-seat-right .ddz-backs .dcard-back:first-child { margin-top: 0; }
+html.ddz-ls .ddz-play-left {
+    left: 22%;
+    top: 42%;
+    max-width: 38%;
+    justify-content: flex-start;
+}
+html.ddz-ls .ddz-play-right {
+    right: 22%;
+    top: 42%;
+    max-width: 38%;
+    justify-content: flex-end;
+}
+html.ddz-ls .ddz-play-me {
+    left: 50%;
+    bottom: 6%;
+    max-width: 56%;
+}
+html.ddz-ls .ddz-dock {
+    padding: 0 8px 6px 108px;
+    margin-top: 0;
+    overflow: visible;
+}
+html.ddz-ls .ddz-actions { min-height: 40px; margin-bottom: 4px; gap: 10px; }
+html.ddz-ls .ddz-actions .ddz-btn {
+    padding: 8px 22px;
+    font-size: 14px;
+    min-height: 36px;
+    min-width: 72px;
+    width: auto;
+}
+html.ddz-ls .ddz-myhand {
+    padding-top: 22px;
+    min-height: 78px;
+    justify-content: flex-start;
+    overflow: visible;
+}
+html.ddz-ls .dcard { width: 46px; height: 66px; }
+html.ddz-ls .dcard-rank { font-size: 15px; }
+html.ddz-ls .dcard-suit { font-size: 12px; }
+html.ddz-ls .dcard-face { font-size: 18px; }
+html.ddz-ls .dcard-mini { width: 28px; height: 40px; }
+html.ddz-ls .ddz-avatar { width: 44px; height: 44px; }
+html.ddz-ls .ddz-seat-me .ddz-avatar { width: 40px; height: 40px; }
+html.ddz-ls .ddz-btn,
+html.ddz-ls .ddz-mini { width: auto; }
+
+.ddz-rotate-tip {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 8, 4, 0.88);
+}
+.ddz-rotate-tip[hidden] { display: none !important; }
+.ddz-rotate-card {
+    text-align: center;
+    color: #ffe08a;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+.ddz-rotate-card p { margin: 0 0 18px; }
+.ddz-rotate-card .ddz-btn {
+    width: auto;
+    min-width: 140px;
+    margin: 0 auto;
+}
+.ddz-rotate-phone {
+    width: 54px;
+    height: 90px;
+    margin: 0 auto 16px;
+    border: 3px solid #ffe08a;
+    border-radius: 10px;
+    animation: ddz-rotate-hint 1.4s ease-in-out infinite;
+}
+@keyframes ddz-rotate-hint {
+    0% { transform: rotate(0deg); }
+    40% { transform: rotate(90deg); }
+    100% { transform: rotate(90deg); }
+}
+
+@media (orientation: portrait) {
+    html.ddz-ls .ddz-rotate-tip {
+        display: flex;
+    }
+    html.ddz-ls .ddz-rotate-tip[hidden] {
+        display: flex !important;
+    }
 }

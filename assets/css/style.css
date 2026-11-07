@@ -51,7 +51,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; height: 100%; }
+html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior-x: none; }
 html { scrollbar-color: color-mix(in srgb, var(--theme-primary) 50%, #94a3b8) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -463,8 +463,10 @@ body.nav-open .nav-mask { opacity: 1; pointer-events: auto; }
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    overscroll-behavior-x: none;
     padding: 20px max(20px, calc((100% - 1120px) / 2)) calc(28px + env(safe-area-inset-bottom));
 }
 .page-head { margin-bottom: 28px; }
@@ -1059,6 +1061,7 @@ body.modal-open {
         width: calc(100% - 28px);
         margin: 20px auto 48px;
         margin-bottom: calc(48px + env(safe-area-inset-bottom));
+        touch-action: pan-y;
     }
     .page-head { margin-bottom: 18px; }
     .page-head h1 {
@@ -1079,8 +1082,16 @@ body.modal-open {
         text-align: center;
         padding: 12px 16px;
     }
-    .drawer-close, .menu-toggle, .drawer-logout, .wall-prev, .wall-next {
+    .drawer-close, .menu-toggle, .drawer-logout, .wall-prev, .wall-next,
+    .emoji-toggle, .emoji-tabs button,
+    .ddz-btn, .ddz-mini {
         width: auto;
+    }
+    .emoji-toggle, .emoji-item {
+        padding: 0;
+    }
+    .emoji-tabs button {
+        padding: 8px 10px;
     }
     .notice-mask,
     .confirm-mask {
@@ -1115,7 +1126,7 @@ body.modal-open {
         padding: 8px 10px;
         font-size: 13px;
     }
-    .panel {
+    .panel:has(.table) {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
@@ -1657,18 +1668,28 @@ img.avatar { display: block; }
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 10px;
-    max-height: 320px;
+    max-height: min(70vh, 420px);
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow: hidden;
+    overscroll-behavior: contain;
 }
 .emoji-panel[hidden],
 .emoji-suggest[hidden] {
     display: none !important;
 }
-.emoji-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.emoji-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
 .emoji-tabs button {
-    padding: 6px 12px;
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 10px;
     margin: 0;
     background: var(--surface-2);
     color: var(--ink);
@@ -1676,6 +1697,7 @@ img.avatar { display: block; }
     box-shadow: none;
     letter-spacing: 0.02em;
     font-size: 13px;
+    white-space: nowrap;
 }
 .emoji-tabs button:hover { filter: none; box-shadow: none; background: var(--surface-3); }
 .emoji-tabs button.is-on {
@@ -1687,6 +1709,7 @@ img.avatar { display: block; }
     position: relative;
     display: block;
     margin: 0;
+    flex-shrink: 0;
 }
 .emoji-search-wrap .nav-icon {
     position: absolute;
@@ -1709,13 +1732,18 @@ img.avatar { display: block; }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
     gap: 6px;
+    overflow-x: hidden;
     overflow-y: auto;
-    max-height: 210px;
+    flex: 1;
+    min-height: 140px;
+    max-height: none;
     padding: 2px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 .emoji-grid.is-sticker-grid {
     grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-    max-height: 260px;
 }
 .emoji-item {
     width: 100%;
@@ -1729,6 +1757,14 @@ img.avatar { display: block; }
     border: 1px solid transparent;
     box-shadow: none;
     letter-spacing: 0;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.emoji-item img {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    user-select: none;
 }
 .emoji-item:hover {
     filter: none;
@@ -1773,7 +1809,11 @@ img.avatar { display: block; }
     display: flex;
     gap: 6px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 2px;
+    overscroll-behavior-x: none;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
 }
 .emoji-suggest-row .emoji-item {
     width: 48px;
@@ -1786,3 +1826,77 @@ img.avatar { display: block; }
 }
 .chat-form .emoji-composer { margin-bottom: 10px; }
 .reply-form .emoji-composer { margin-bottom: 10px; }
+
+@media (max-width: 900px) {
+    body.emoji-open .wrap {
+        overflow: hidden;
+        touch-action: none;
+    }
+    .emoji-toggle {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+    }
+    .emoji-panel,
+    .emoji-suggest {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        z-index: 80;
+        max-height: min(62vh, 520px);
+        padding: 12px;
+        width: auto;
+    }
+    .emoji-suggest {
+        z-index: 81;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .emoji-suggest[hidden] {
+        display: none !important;
+    }
+    .emoji-tabs button {
+        min-height: 40px;
+        font-size: 13px;
+        touch-action: manipulation;
+    }
+    .emoji-grid {
+        min-height: 180px;
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 8px;
+    }
+    .emoji-grid.is-sticker-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .emoji-item {
+        height: 48px;
+    }
+    .emoji-item.is-sticker {
+        height: 96px;
+    }
+    .emoji-item .emoji-sticker {
+        width: 80px;
+        height: 80px;
+    }
+    .emoji-suggest-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        overflow-x: hidden;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+        max-height: min(42vh, 320px);
+        gap: 8px;
+        touch-action: pan-y;
+        overscroll-behavior: contain;
+    }
+    .emoji-suggest-row .emoji-item,
+    .emoji-suggest-row .emoji-item.is-sticker {
+        width: 100%;
+        flex: none;
+        height: 96px;
+    }
+}
