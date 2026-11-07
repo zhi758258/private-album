@@ -228,12 +228,78 @@
         var sugItems = [];
 
         function isSheet() {
-            return window.matchMedia('(max-width: 900px)').matches;
+            var w = window.innerWidth || document.documentElement.clientWidth || 0;
+            return w <= 900
+                || window.matchMedia('(max-width: 900px)').matches
+                || (window.matchMedia('(pointer: coarse)').matches && w <= 1200);
+        }
+        function clearSheetStyle(el) {
+            ['position', 'left', 'right', 'top', 'bottom', 'width', 'height', 'max-height', 'min-height', 'z-index', 'padding', 'border-radius', 'box-sizing', 'display', 'flex-direction', 'overflow'].forEach(function (k) {
+                el.style.removeProperty(k);
+            });
+            el.style.removeProperty('--emoji-sheet-h');
+        }
+        function applySheetStyle(el, h, shown) {
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('left', '0', 'important');
+            el.style.setProperty('right', '0', 'important');
+            el.style.setProperty('top', 'auto', 'important');
+            el.style.setProperty('bottom', '0', 'important');
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('height', h + 'px', 'important');
+            el.style.setProperty('max-height', h + 'px', 'important');
+            el.style.setProperty('min-height', '0', 'important');
+            el.style.setProperty('z-index', '120', 'important');
+            el.style.setProperty('padding', '12px 12px calc(12px + env(safe-area-inset-bottom, 0px))');
+            el.style.setProperty('border-radius', '18px 18px 0 0');
+            el.style.setProperty('box-sizing', 'border-box');
+            if (shown) {
+                el.style.setProperty('display', 'flex', 'important');
+            } else {
+                el.style.removeProperty('display');
+            }
+            el.style.setProperty('flex-direction', 'column');
+            el.style.setProperty('overflow', 'hidden');
+            el.style.setProperty('--emoji-sheet-h', h + 'px');
+        }
+        function fitSheet() {
+            var sheet = isSheet();
+            var tabs = panel.querySelector('.emoji-tabs');
+            panel.classList.toggle('is-sheet', sheet);
+            suggest.classList.toggle('is-sheet', sheet);
+            if (tabs) {
+                tabs.style.display = 'grid';
+                tabs.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+                tabs.style.flex = '0 0 auto';
+                tabBtns.forEach(function (b) {
+                    b.style.width = '100%';
+                    b.style.height = '36px';
+                    b.style.minHeight = '36px';
+                    b.style.padding = '0 4px';
+                    b.style.margin = '0';
+                });
+            }
+            grid.style.flex = '1 1 auto';
+            grid.style.minHeight = '0';
+            grid.style.overflowY = 'auto';
+            if (!sheet) {
+                clearSheetStyle(panel);
+                clearSheetStyle(suggest);
+                return;
+            }
+            var vv = window.visualViewport;
+            var vh = Math.round((vv && vv.height) ? vv.height : (window.innerHeight || 640));
+            var h = Math.round(vh * 0.82);
+            if (h > vh - 36) { h = vh - 36; }
+            if (h < 280) { h = Math.max(Math.round(vh * 0.72), 240); }
+            applySheetStyle(panel, h, !panel.hidden);
+            applySheetStyle(suggest, h, !suggest.hidden);
         }
         function syncDock() {
             var home = isSheet() ? document.body : wrap;
             if (panel.parentNode !== home) home.appendChild(panel);
             if (suggest.parentNode !== home) home.appendChild(suggest);
+            fitSheet();
             document.body.classList.toggle('emoji-open', isSheet() && (!panel.hidden || !suggest.hidden));
         }
 
@@ -424,6 +490,9 @@
             hideSuggest();
         });
         window.addEventListener('resize', syncDock);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncDock);
+        }
 
         function maybeSuggest() {
             if (!panel.hidden) return;

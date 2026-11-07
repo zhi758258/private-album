@@ -61,8 +61,8 @@ function render_header(string $title, array $user, string $active = ''): void
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
     <title><?= h($title) ?> · <?= h(app_name()) ?></title>
     <meta name="csrf-token" content="<?= h(csrf_token()) ?>">
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <script src="/assets/js/emoji.js" defer></script>
+    <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/style.css') ?>">
+    <script src="/assets/js/emoji.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/emoji.js') ?>" defer></script>
 </head>
 <body>
     <div class="grain"></div>
