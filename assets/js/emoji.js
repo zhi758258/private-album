@@ -92,33 +92,6 @@
             .catch(function () { setCatalog(packs); });
     }
 
-    function localHits(q, limit) {
-        q = String(q || '').trim();
-        if (!q) return [];
-        var ql = q.toLowerCase();
-        var hits = [];
-        ['qq', 'wx', 'dy'].forEach(function (k) {
-            (packs[k] || []).forEach(function (it) {
-                var n = String(it.name || '').toLowerCase();
-                var score = 0;
-                if (n === ql) score = 100;
-                else if (n.indexOf(ql) >= 0) score = 80 - n.indexOf(ql);
-                else if (ql.indexOf(n) >= 0) score = 60;
-                else {
-                    var aliases = it.aliases || [];
-                    for (var i = 0; i < aliases.length; i++) {
-                        var al = String(aliases[i] || '').toLowerCase();
-                        if (al === ql) { score = 90; break; }
-                        if (al.indexOf(ql) >= 0 || ql.indexOf(al) >= 0) { score = 70; break; }
-                    }
-                }
-                if (score > 0) hits.push(Object.assign({ score: score }, it));
-            });
-        });
-        hits.sort(function (a, b) { return b.score - a.score; });
-        return hits.slice(0, limit || 24);
-    }
-
     function insertAt(ta, start, end, token) {
         var v = ta.value;
         ta.value = v.slice(0, start) + token + v.slice(end);
@@ -126,17 +99,6 @@
         ta.focus();
         try { ta.setSelectionRange(pos, pos); } catch (e) {}
         ta.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    function keywordAt(ta) {
-        var v = ta.value;
-        var pos = typeof ta.selectionStart === 'number' ? ta.selectionStart : v.length;
-        var left = v.slice(0, pos);
-        var open = left.lastIndexOf('[');
-        var close = left.lastIndexOf(']');
-        if (open > close) return { word: '', start: pos, end: pos };
-        var m = left.match(/([^\s\[\]]+)$/);
-        if (!m) return { word: '', start: pos, end: pos };
-        return { word: m[1], start: pos - m[1].length, end: pos };
     }
 
     function itemBtn(item, onPick) {
@@ -197,11 +159,6 @@
         bar.appendChild(searchBtn);
         wrap.appendChild(bar);
 
-        var suggest = document.createElement('div');
-        suggest.className = 'emoji-suggest';
-        suggest.hidden = true;
-        wrap.appendChild(suggest);
-
         var panel = document.createElement('div');
         panel.className = 'emoji-panel';
         panel.hidden = true;
@@ -223,9 +180,7 @@
         var tabBtns = panel.querySelectorAll('[data-pack]');
         var pack = 'qq';
         var netTimer = 0;
-        var sugTimer = 0;
         var sugSeq = 0;
-        var sugItems = [];
 
         function isSheet() {
             var w = window.innerWidth || document.documentElement.clientWidth || 0;
@@ -266,7 +221,6 @@
             var sheet = isSheet();
             var tabs = panel.querySelector('.emoji-tabs');
             panel.classList.toggle('is-sheet', sheet);
-            suggest.classList.toggle('is-sheet', sheet);
             if (tabs) {
                 tabs.style.display = 'grid';
                 tabs.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
@@ -284,7 +238,6 @@
             grid.style.overflowY = 'auto';
             if (!sheet) {
                 clearSheetStyle(panel);
-                clearSheetStyle(suggest);
                 return;
             }
             var vv = window.visualViewport;
@@ -293,21 +246,12 @@
             if (h > vh - 36) { h = vh - 36; }
             if (h < 280) { h = Math.max(Math.round(vh * 0.72), 240); }
             applySheetStyle(panel, h, !panel.hidden);
-            applySheetStyle(suggest, h, !suggest.hidden);
         }
         function syncDock() {
             var home = isSheet() ? document.body : wrap;
             if (panel.parentNode !== home) home.appendChild(panel);
-            if (suggest.parentNode !== home) home.appendChild(suggest);
             fitSheet();
-            document.body.classList.toggle('emoji-open', isSheet() && (!panel.hidden || !suggest.hidden));
-        }
-
-        function hideSuggest() {
-            suggest.hidden = true;
-            suggest.innerHTML = '';
-            sugItems = [];
-            syncDock();
+            document.body.classList.toggle('emoji-open', isSheet() && !panel.hidden);
         }
         function setTab(next) {
             pack = next;
@@ -328,7 +272,6 @@
         function openPanel(nextPack, focusSearch) {
             if (nextPack) setTab(nextPack);
             panel.hidden = false;
-            hideSuggest();
             paint();
             syncButtons();
             syncDock();
@@ -351,7 +294,7 @@
             grid.classList.toggle('is-sticker-grid', pack === 'net');
             if (pack === 'net') {
                 grid.innerHTML = '<div class="emoji-empty">加载热门斗图…</div>';
-                netSearch(q, true);
+                netSearch(q);
                 return;
             }
             var list = packs[pack] || [];
@@ -367,60 +310,39 @@
             }
             paintLocal(list);
         }
-        function netSearch(q, intoPanel) {
+        function netSearch(q) {
             var seq = ++sugSeq;
-            var target = intoPanel ? grid : suggest;
-            if (intoPanel) target.innerHTML = '<div class="emoji-empty">搜索中…</div>';
+            grid.innerHTML = '<div class="emoji-empty">搜索中…</div>';
             fetch('/emoji_api.php?action=search&q=' + encodeURIComponent(q) + '&net=1', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.json().catch(function () { return null; }); })
                 .then(function (d) {
                     if (seq !== sugSeq) return;
                     if (!d || !d.ok) {
-                        if (intoPanel) target.innerHTML = '<div class="emoji-empty">搜索失败，请稍后重试</div>';
+                        grid.innerHTML = '<div class="emoji-empty">搜索失败，请稍后重试</div>';
                         return;
                     }
                     var faces = d.faces || [];
                     var stickers = d.stickers || [];
-                    if (intoPanel) {
-                        target.innerHTML = '';
-                        if (pack === 'net') {
-                            if (!stickers.length) {
-                                target.innerHTML = '<div class="emoji-empty">没有搜到相关斗图</div>';
-                                return;
-                            }
-                            stickers.forEach(function (it) { target.appendChild(itemBtn(it, pick)); });
+                    grid.innerHTML = '';
+                    if (pack === 'net') {
+                        if (!stickers.length) {
+                            grid.innerHTML = '<div class="emoji-empty">没有搜到相关斗图</div>';
                             return;
                         }
-                        if (!faces.length && !stickers.length) {
-                            target.innerHTML = '<div class="emoji-empty">没有搜到相关表情</div>';
-                            return;
-                        }
-                        faces.forEach(function (it) { target.appendChild(itemBtn(it, pick)); });
-                        stickers.forEach(function (it) { target.appendChild(itemBtn(it, pick)); });
-                    } else if (faces.length || stickers.length) {
-                        showSuggest(faces, stickers);
+                        stickers.forEach(function (it) { grid.appendChild(itemBtn(it, pick)); });
+                        return;
                     }
+                    if (!faces.length && !stickers.length) {
+                        grid.innerHTML = '<div class="emoji-empty">没有搜到相关表情</div>';
+                        return;
+                    }
+                    faces.forEach(function (it) { grid.appendChild(itemBtn(it, pick)); });
+                    stickers.forEach(function (it) { grid.appendChild(itemBtn(it, pick)); });
                 })
                 .catch(function () {
                     if (seq !== sugSeq) return;
-                    if (intoPanel) target.innerHTML = '<div class="emoji-empty">搜索失败，请稍后重试</div>';
+                    grid.innerHTML = '<div class="emoji-empty">搜索失败，请稍后重试</div>';
                 });
-        }
-        function showSuggest(faces, stickers) {
-            suggest.innerHTML = '';
-            var all = (faces || []).concat(stickers || []);
-            if (!all.length) { hideSuggest(); return; }
-            sugItems = all.slice(0, 18);
-            var lab = document.createElement('div');
-            lab.className = 'emoji-suggest-lab';
-            lab.textContent = '相关表情 / 斗图';
-            suggest.appendChild(lab);
-            var row = document.createElement('div');
-            row.className = 'emoji-suggest-row';
-            sugItems.forEach(function (it) { row.appendChild(itemBtn(it, pickReplace)); });
-            suggest.appendChild(row);
-            suggest.hidden = false;
-            syncDock();
         }
         function pick(item) {
             var token = item.token || '';
@@ -429,15 +351,6 @@
             var end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : start;
             insertAt(ta, start, end, token);
             closePanel();
-            hideSuggest();
-        }
-        function pickReplace(item) {
-            var token = item.token || '';
-            if (!token) return;
-            var kw = keywordAt(ta);
-            insertAt(ta, kw.start, kw.end, token);
-            closePanel();
-            hideSuggest();
         }
 
         function isolateTouch(el) {
@@ -451,7 +364,6 @@
         }
         isolateTouch(panel);
         isolateTouch(grid);
-        isolateTouch(suggest);
 
         tabBtns.forEach(function (b) {
             b.addEventListener('click', function () {
@@ -468,7 +380,7 @@
             clearTimeout(netTimer);
             if (pack === 'net') {
                 var q = search.value.trim();
-                netTimer = setTimeout(function () { netSearch(q, true); }, 280);
+                netTimer = setTimeout(function () { netSearch(q); }, 280);
                 return;
             }
             paint();
@@ -485,50 +397,17 @@
         });
         document.addEventListener('click', function (e) {
             var t = e.target;
-            if (wrap.contains(t) || panel.contains(t) || suggest.contains(t)) return;
+            if (wrap.contains(t) || panel.contains(t)) return;
             closePanel();
-            hideSuggest();
         });
         window.addEventListener('resize', syncDock);
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', syncDock);
         }
 
-        function maybeSuggest() {
-            if (!panel.hidden) return;
-            var kw = keywordAt(ta);
-            var word = kw.word;
-            var hasCjk = /[\u4e00-\u9fff]/.test(word);
-            if (!word || word.length < (hasCjk ? 1 : 2) || word.length > 12) {
-                hideSuggest();
-                return;
-            }
-            var faces = localHits(word, 12);
-            if (faces.length) showSuggest(faces, []);
-            clearTimeout(sugTimer);
-            sugTimer = setTimeout(function () { netSearch(word, false); }, 320);
-        }
-        ta.addEventListener('input', function () {
-            if (ta.composing) return;
-            maybeSuggest();
-        });
-        ta.addEventListener('compositionstart', function () { ta.composing = true; });
-        ta.addEventListener('compositionend', function () {
-            ta.composing = false;
-            maybeSuggest();
-        });
         ta.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                hideSuggest();
-                closePanel();
-                return;
-            }
-            if (e.key === 'Enter' && !e.shiftKey && !suggest.hidden && sugItems.length) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                pickReplace(sugItems[0]);
-            }
-        }, true);
+            if (e.key === 'Escape') closePanel();
+        });
 
         whenCatalog(paint);
     }

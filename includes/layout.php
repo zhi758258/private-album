@@ -459,7 +459,7 @@ function render_footer(): void
                 return window.scrollY || document.documentElement.scrollTop || 0;
             }
             function insideEmoji(el) {
-                return !!(el && el.closest && el.closest('.emoji-panel, .emoji-suggest, .emoji-grid, .emoji-suggest-row, .emoji-item, .emoji-bar'));
+                return !!(el && el.closest && el.closest('.emoji-panel, .emoji-grid, .emoji-item, .emoji-bar'));
             }
             function onTouchStart(e) {
                 if (insideEmoji(e.target)) { pulling = false; sup = false; return; }
