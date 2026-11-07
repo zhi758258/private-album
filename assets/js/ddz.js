@@ -16,7 +16,7 @@
     };
     Object.keys(uiMap).forEach(function (k) { ui[k] = document.getElementById(uiMap[k]); });
 
-    var state = { code: cfg.code || '', seat: -1, isOwner: false, data: null, selected: {}, timer: null, busy: false };
+    var state = { code: cfg.code || '', seat: -1, isOwner: false, data: null, selected: {}, timer: null, busy: false, hintIdx: 0, lastFlyKey: '', playHtml: {} };
 
     var RANK_TXT = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '2' };
     var SUITS = ['♠', '♥', '♣', '♦'];
@@ -178,11 +178,13 @@
         stopPoll();
         unlockLand();
         state.code = ''; state.seat = -1; state.data = null; state.selected = {};
+        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {};
         ui.table.hidden = true; ui.lobby.hidden = false; ui.over.hidden = true;
         loadScore(); loadRooms();
     }
     function enterRoom(code) {
         state.code = code; ui.lobby.hidden = true; ui.table.hidden = false; ui.over.hidden = true;
+        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {};
         lockLand();
         poll(true);
     }
@@ -252,14 +254,26 @@
     }
     function renderPlayer(el, s, d) { renderSeat(el, s, d, false); }
 
+    function playKey(d) {
+        if (d.lastPlay && d.lastPlay.cards) {
+            return d.lastPlay.seat + ':' + d.lastPlay.cards.join(',');
+        }
+        return 'none';
+    }
     function renderPlayGroup(el, s, d) {
         if (!el) { return; }
+        var html = '';
         if (d.lastPlay && d.lastPlay.seat === s) {
-            el.innerHTML = d.lastPlay.cards.map(function (id) { return dcard(id, 'dcard-mini ddz-fly'); }).join('');
+            html = d.lastPlay.cards.map(function (id) { return dcard(id, 'dcard-mini'); }).join('');
         } else if (d.passed && d.passed[s]) {
-            el.innerHTML = '<span class="ddz-no">不要</span>';
-        } else {
-            el.innerHTML = '';
+            html = '<span class="ddz-no">不要</span>';
+        }
+        if (state.playHtml[s] === html) { return; }
+        el.innerHTML = html;
+        state.playHtml[s] = html;
+        if (d.lastPlay && d.lastPlay.seat === s && playKey(d) !== state.lastFlyKey) {
+            var nodes = el.querySelectorAll('.dcard');
+            for (var i = 0; i < nodes.length; i++) { nodes[i].classList.add('ddz-fly'); }
         }
     }
 
@@ -336,8 +350,9 @@
         if (d.phase === 'play') {
             if (d.turn === d.mySeat) {
                 var canPass = d.lastPlay && d.lastPlay.seat !== d.mySeat;
-                btn('出牌', 'ddz-btn-green', function () { playCards(); }, Object.keys(state.selected).length === 0);
                 if (canPass) { btn('不出', '', function () { pass(); }); }
+                btn('提示', 'ddz-btn-hint', function () { hintCards(); });
+                btn('出牌', 'ddz-btn-green', function () { playCards(); }, Object.keys(state.selected).length === 0);
             } else {
                 var name = (d.players[d.turn] || {}).name || '';
                 ui.myActions.innerHTML = '<span class="ddz-waiting">等待 ' + esc(name) + ' 出牌…</span>';
@@ -373,6 +388,9 @@
         renderPlayGroup(ui.playLeft, leftSeat, d);
         renderPlayGroup(ui.playRight, rightSeat, d);
         renderPlayGroup(ui.playMe, mySeat, d);
+        var nextFly = playKey(d);
+        if (nextFly !== state.lastFlyKey) { state.hintIdx = 0; }
+        state.lastFlyKey = nextFly;
         renderBottom(d);
         renderTurn(d);
         renderMeInfo(d);
@@ -397,17 +415,43 @@
     }
     function pass() {
         if (state.busy) { return; }
-        state.busy = true; state.selected = {};
+        state.busy = true; state.selected = {}; state.hintIdx = 0;
         post('pass', { code: state.code }).then(function (r) {
             state.busy = false;
             if (!r.ok) { flash(r.error || '操作失败', false); }
             poll(true);
         });
     }
+    function applyHint(ids) {
+        state.selected = {};
+        (ids || []).forEach(function (id) { state.selected[id] = true; });
+        var cards = ui.myHand.querySelectorAll('.dcard');
+        for (var i = 0; i < cards.length; i++) {
+            var id = Number(cards[i].getAttribute('data-id'));
+            cards[i].classList.toggle('is-selected', !!state.selected[id]);
+        }
+        if (state.data) { renderActions(state.data); }
+    }
+    function hintCards() {
+        if (state.busy || !state.code) { return; }
+        state.busy = true;
+        post('hint', { code: state.code }).then(function (r) {
+            state.busy = false;
+            if (!r.ok) { flash(r.error || '提示失败', false); return; }
+            var hints = r.hints || [];
+            if (!hints.length) {
+                flash(r.pass ? '没有能大过的牌' : '没有可出的牌', false);
+                return;
+            }
+            var idx = state.hintIdx % hints.length;
+            state.hintIdx += 1;
+            applyHint(hints[idx]);
+        });
+    }
     function playCards() {
         var ids = Object.keys(state.selected).map(Number);
         if (!ids.length || state.busy) { return; }
-        state.busy = true;
+        state.busy = true; state.hintIdx = 0;
         post('play', { code: state.code, cards: JSON.stringify(ids) }).then(function (r) {
             state.busy = false;
             if (!r.ok) { flash(r.error || '出牌失败', false); }

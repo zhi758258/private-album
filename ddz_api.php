@@ -383,6 +383,28 @@ if ($action === 'pass') {
     ddz_json(['ok' => true]);
 }
 
+if ($action === 'hint') {
+    $code = strtoupper(trim((string) ($_POST['code'] ?? $_GET['code'] ?? '')));
+    $state = ddz_load($code);
+    if ($state === null || $state['phase'] !== 'play') {
+        ddz_json(['ok' => false, 'error' => '当前不能提示。'], 400);
+    }
+    $seat = ddz_seat_of($state, $uid);
+    if ($seat < 0) {
+        ddz_json(['ok' => false, 'error' => '你不在该房间。'], 403);
+    }
+    if ((int) $state['turn'] !== $seat) {
+        ddz_json(['ok' => false, 'error' => '还没轮到你。'], 400);
+    }
+    $hand = $state['hands'][$seat] ?? [];
+    $last = $state['lastPlay'];
+    if (is_array($last) && (int) ($last['seat'] ?? -1) === $seat) {
+        $last = null;
+    }
+    $hints = ddz_hints($hand, is_array($last) ? $last : null);
+    ddz_json(['ok' => true, 'hints' => $hints, 'pass' => !$hints && $last !== null]);
+}
+
 if ($action === 'leave') {
     $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
     $state = ddz_load($code);

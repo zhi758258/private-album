@@ -468,6 +468,59 @@ function ddz_ai_follow(array $hand, array $last, array $state): ?array
     return null;
 }
 
+function ddz_hints(array $hand, ?array $last): array
+{
+    $hand = array_values(array_map('intval', $hand));
+    if (!$hand) {
+        return [];
+    }
+    $cands = ddz_candidates($hand);
+    $usable = [];
+    if ($last === null) {
+        foreach ($cands as $c) {
+            if ($c['type'] !== 'bomb' && $c['type'] !== 'rocket') {
+                $usable[] = $c;
+            }
+        }
+        if (!$usable) {
+            $usable = $cands;
+        }
+        usort($usable, function ($a, $b) {
+            $c = count($b['cards']) <=> count($a['cards']);
+            return $c !== 0 ? $c : $a['rank'] <=> $b['rank'];
+        });
+    } else {
+        foreach ($cands as $c) {
+            if (ddz_beats($c, $last)) {
+                $usable[] = $c;
+            }
+        }
+        usort($usable, function ($a, $b) {
+            $bombA = ($a['type'] === 'bomb' || $a['type'] === 'rocket') ? 1 : 0;
+            $bombB = ($b['type'] === 'bomb' || $b['type'] === 'rocket') ? 1 : 0;
+            if ($bombA !== $bombB) {
+                return $bombA <=> $bombB;
+            }
+            if ($a['rank'] !== $b['rank']) {
+                return $a['rank'] <=> $b['rank'];
+            }
+            return count($a['cards']) <=> count($b['cards']);
+        });
+    }
+    $out = [];
+    $seen = [];
+    foreach ($usable as $c) {
+        $ids = array_values(array_map('intval', $c['cards']));
+        $key = implode(',', $ids);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $out[] = $ids;
+    }
+    return $out;
+}
+
 function ddz_new_state(array $players): array
 {
     return [
