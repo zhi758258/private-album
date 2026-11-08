@@ -1404,7 +1404,7 @@ img.avatar { display: block; }
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    background: var(--rose);
+    background: #e53935;
     color: #fff;
     font-size: 11px;
     font-weight: 600;
@@ -1893,7 +1893,7 @@ img.avatar { display: block; }
     height: 16px;
     padding: 0 4px;
     border-radius: 999px;
-    background: var(--rose);
+    background: #e53935;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -1902,6 +1902,7 @@ img.avatar { display: block; }
     align-items: center;
     justify-content: center;
 }
+.notif-dot[hidden] { display: none; }
 .notif-panel {
     position: absolute;
     top: calc(100% + 10px);
@@ -1917,6 +1918,7 @@ img.avatar { display: block; }
     box-shadow: var(--surface-shadow-soft, 0 12px 40px rgba(0, 0, 0, 0.28));
     z-index: 60;
 }
+.notif-panel[hidden] { display: none; }
 .notif-head {
     display: flex;
     align-items: center;
