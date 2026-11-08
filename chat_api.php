@@ -25,11 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $content = mb_substr($content, 0, 2000);
     $created = now();
-    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, 0, :created_at)');
+    [$locLat, $locLng, $locName] = location_from_post($_POST);
+    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, 0, :created_at)');
     $ins->execute([
         ':sender_id' => $me,
         ':receiver_id' => $otherId,
         ':content' => $content,
+        ':loc_lat' => $locLat,
+        ':loc_lng' => $locLng,
+        ':loc_name' => $locName,
         ':created_at' => $created,
     ]);
     notification_add($otherId, $me, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $me);
@@ -39,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => (int) db()->lastInsertId(),
             'mine' => true,
             'content' => $content,
+            'loc_html' => location_chip_html($locLat, $locLng, $locName),
             'created_at' => $created,
         ],
     ], JSON_UNESCAPED_UNICODE);
@@ -48,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $after = (int) ($_GET['after'] ?? 0);
 if ($after > 0) {
     $stmt = db()->prepare('
-        SELECT id, sender_id, content, created_at
+        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at
         FROM private_messages
         WHERE ((sender_id = :me AND receiver_id = :other) OR (sender_id = :other2 AND receiver_id = :me2))
           AND id > :after
@@ -58,7 +63,7 @@ if ($after > 0) {
     $stmt->execute([':me' => $me, ':other' => $otherId, ':other2' => $otherId, ':me2' => $me, ':after' => $after]);
 } else {
     $stmt = db()->prepare('
-        SELECT id, sender_id, content, created_at
+        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at
         FROM private_messages
         WHERE (sender_id = :me AND receiver_id = :other) OR (sender_id = :other2 AND receiver_id = :me2)
         ORDER BY id ASC
@@ -79,6 +84,7 @@ foreach ($rows as $r) {
         'id' => $rid,
         'mine' => (int) $r['sender_id'] === $me,
         'content' => $r['content'],
+        'loc_html' => location_chip_html($r['loc_lat'] ?? null, $r['loc_lng'] ?? null, $r['loc_name'] ?? ''),
         'created_at' => $r['created_at'],
     ];
 }

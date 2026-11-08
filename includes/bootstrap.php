@@ -116,6 +116,14 @@ function init_schema(PDO $pdo): void
         $pdo->exec('ALTER TABLE messages ADD COLUMN parent_id INT UNSIGNED NULL');
         $pdo->exec('CREATE INDEX idx_messages_parent ON messages (parent_id)');
     }
+    foreach (['messages', 'private_messages'] as $locTable) {
+        if (!mysql_column_exists($pdo, $locTable, 'loc_lat')) {
+            $pdo->exec("ALTER TABLE `{$locTable}`
+                ADD COLUMN loc_lat DECIMAL(10,7) NULL,
+                ADD COLUMN loc_lng DECIMAL(10,7) NULL,
+                ADD COLUMN loc_name VARCHAR(120) NOT NULL DEFAULT ''");
+        }
+    }
     if (!mysql_column_exists($pdo, 'users', 'avatar')) {
         $pdo->exec('ALTER TABLE users ADD COLUMN avatar VARCHAR(100) NULL');
     }
@@ -682,6 +690,59 @@ function notifications_mark_read(int $uid, ?int $id = null): void
     }
     $stmt = db()->prepare('UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND is_read = 0');
     $stmt->execute([':user_id' => $uid]);
+}
+
+function location_icon_svg(): string
+{
+    return '<svg viewBox="0 0 24 24" class="loc-icon" aria-hidden="true"><path d="M12 21.2s6.6-6.1 6.6-11a6.6 6.6 0 1 0-13.2 0c0 4.9 6.6 11 6.6 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+}
+
+function location_from_post(array $post): array
+{
+    $latRaw = $post['loc_lat'] ?? '';
+    $lngRaw = $post['loc_lng'] ?? '';
+    $name = trim((string) ($post['loc_name'] ?? ''));
+    if (!is_numeric($latRaw) || !is_numeric($lngRaw)) {
+        return [null, null, ''];
+    }
+    $lat = (float) $latRaw;
+    $lng = (float) $lngRaw;
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        return [null, null, ''];
+    }
+    if (abs($lat) < 0.000001 && abs($lng) < 0.000001) {
+        return [null, null, ''];
+    }
+    if ($name === '') {
+        $name = '我的位置';
+    }
+    $name = preg_replace('/\s+/u', ' ', $name) ?? $name;
+    $name = mb_substr(trim($name), 0, 120);
+    return [$lat, $lng, $name];
+}
+
+function location_chip_html($lat, $lng, ?string $name = ''): string
+{
+    if (!is_numeric($lat) || !is_numeric($lng)) {
+        return '';
+    }
+    $lat = (float) $lat;
+    $lng = (float) $lng;
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        return '';
+    }
+    $label = trim((string) $name);
+    if ($label === '') {
+        $label = '我的位置';
+    }
+    $label = mb_substr($label, 0, 120);
+    $position = number_format($lng, 6, '.', '') . ',' . number_format($lat, 6, '.', '');
+    $url = 'https://uri.amap.com/marker?position=' . $position
+        . '&name=' . rawurlencode($label)
+        . '&coordinate=wgs84&callnative=1';
+    $title = number_format($lat, 5, '.', '') . ', ' . number_format($lng, 5, '.', '');
+    return '<a class="loc-chip" href="' . h($url) . '" target="_blank" rel="noopener noreferrer" title="' . h($title) . '">'
+        . location_icon_svg() . '<span class="loc-label">' . h($label) . '</span></a>';
 }
 
 function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool

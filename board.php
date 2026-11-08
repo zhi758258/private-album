@@ -27,13 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $stmt = db()->prepare('
-        INSERT INTO messages (user_id, parent_id, content, created_at)
-        VALUES (:user_id, :parent_id, :content, :created_at)
+        INSERT INTO messages (user_id, parent_id, content, loc_lat, loc_lng, loc_name, created_at)
+        VALUES (:user_id, :parent_id, :content, :loc_lat, :loc_lng, :loc_name, :created_at)
     ');
+    [$locLat, $locLng, $locName] = location_from_post($_POST);
     $stmt->execute([
         ':user_id' => $user['id'],
         ':parent_id' => $parentId > 0 ? $parentId : null,
         ':content' => mb_substr($content, 0, 1000),
+        ':loc_lat' => $locLat,
+        ':loc_lng' => $locLng,
+        ':loc_name' => $locName,
         ':created_at' => now(),
     ]);
     $newId = (int) db()->lastInsertId();
@@ -77,7 +81,7 @@ render_header(nav_label('board'), $user, 'board');
 <section class="page-head">
     <h1><?= h(nav_label('board')) ?></h1>
 </section>
-<form class="panel" method="post">
+<form class="panel" method="post" data-location>
     <?= csrf_field() ?>
     <label for="content">写一条留言</label>
     <textarea id="content" name="content" maxlength="1000" required placeholder="最多 1000 字，可点表情或打字搜表情" data-emoji></textarea>
@@ -94,6 +98,7 @@ render_header(nav_label('board'), $user, 'board');
             <div class="msg-main">
                 <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
                 <p class="msg-text"><?= render_message_html($msg['content']) ?></p>
+                <?= location_chip_html($msg['loc_lat'] ?? null, $msg['loc_lng'] ?? null, $msg['loc_name'] ?? '') ?>
                 <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
                     <article class="msg reply">
                         <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $reply['user_id'] ?>">
@@ -102,10 +107,11 @@ render_header(nav_label('board'), $user, 'board');
                         <div class="msg-main">
                             <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
                             <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
+                            <?= location_chip_html($reply['loc_lat'] ?? null, $reply['loc_lng'] ?? null, $reply['loc_name'] ?? '') ?>
                         </div>
                     </article>
                 <?php endforeach; ?>
-                <form class="reply-form" method="post">
+                <form class="reply-form" method="post" data-location>
                     <?= csrf_field() ?>
                     <input type="hidden" name="parent_id" value="<?= (int) $msg['id'] ?>">
                     <textarea name="content" maxlength="1000" required placeholder="回复 <?= h($msg['display_name']) ?>" data-emoji></textarea>

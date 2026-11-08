@@ -27,11 +27,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash_set('err', '消息不能为空。');
         redirect('/chat.php?u=' . $otherId);
     }
-    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, 0, :created_at)');
+    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, 0, :created_at)');
+    [$locLat, $locLng, $locName] = location_from_post($_POST);
     $ins->execute([
         ':sender_id' => $uid,
         ':receiver_id' => $otherId,
         ':content' => mb_substr($content, 0, 2000),
+        ':loc_lat' => $locLat,
+        ':loc_lng' => $locLng,
+        ':loc_name' => $locName,
         ':created_at' => now(),
     ]);
     notification_add($otherId, $uid, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $uid);
@@ -39,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $stmt = db()->prepare('
-    SELECT id, sender_id, content, created_at FROM private_messages
+    SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at FROM private_messages
     WHERE (sender_id = :me AND receiver_id = :other)
        OR (sender_id = :other2 AND receiver_id = :me2)
     ORDER BY id ASC
@@ -88,6 +92,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
                 <?php if (!$mine): ?><?= $otherAvatar ?><?php endif; ?>
                 <div class="chat-bubble">
                     <div class="chat-text"><?= render_message_html($m['content']) ?></div>
+                    <?= location_chip_html($m['loc_lat'] ?? null, $m['loc_lng'] ?? null, $m['loc_name'] ?? '') ?>
                     <div class="chat-time"><?= h($m['created_at']) ?></div>
                 </div>
                 <?php if ($mine): ?><?= $selfAvatar ?><?php endif; ?>
@@ -96,7 +101,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
     <?php endif; ?>
 </div>
 
-<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>">
+<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location>
     <?= csrf_field() ?>
     <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
     <button type="submit">发送</button>
@@ -131,6 +136,11 @@ window.CHAT = {
         if (window.Emoji && window.Emoji.render) text.innerHTML = window.Emoji.render(msg.content);
         else text.textContent = msg.content;
         bubble.appendChild(text);
+        if (msg.loc_html) {
+            var locWrap = document.createElement('div');
+            locWrap.innerHTML = msg.loc_html;
+            if (locWrap.firstElementChild) bubble.appendChild(locWrap.firstElementChild);
+        }
         var time = document.createElement('div');
         time.className = 'chat-time';
         time.textContent = msg.created_at;
@@ -178,12 +188,17 @@ window.CHAT = {
         var fd = new FormData();
         fd.append('u', cfg.user);
         fd.append('content', val);
+        ['loc_lat', 'loc_lng', 'loc_name'].forEach(function (n) {
+            var el = form.querySelector('input[name="' + n + '"]');
+            if (el && el.value) fd.append(n, el.value);
+        });
         fd.append('csrf', cfg.csrf);
         fetch('/chat_api.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { return r.json().catch(function () { return null; }); })
             .then(function (d) {
                 if (d && d.ok && d.message) {
                     ta.value = '';
+                    if (window.SiteLocation) window.SiteLocation.reset(form);
                     append([d.message]);
                     box.scrollTop = box.scrollHeight;
                 }

@@ -63,6 +63,7 @@ function render_header(string $title, array $user, string $active = ''): void
     <meta name="csrf-token" content="<?= h(csrf_token()) ?>">
     <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/style.css') ?>">
     <script src="/assets/js/emoji.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/emoji.js') ?>" defer></script>
+    <script src="/assets/js/location.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/location.js') ?>" defer></script>
 </head>
 <body>
     <div class="grain"></div>
