@@ -199,7 +199,7 @@ function render_message_html(string $content): string
 {
     $lookup = emoji_lookup();
     $parts = preg_split(
-        '/(\[(?:qq|wx|dy):[^\[\]]{1,32}\]|\[net:https:\/\/[^\[\s<>"\']{8,480}\])/u',
+        '/(\[(?:qq|wx|dy):[^\[\]]{1,32}\]|\[net:https:\/\/[^\[\s<>"\']{8,480}\]|https:\/\/[^\s<>"\'\[\]]+?\.(?i:gif|png|jpe?g|webp)(?:\?[^\s<>"\'\[\]]*)?)/u',
         $content,
         -1,
         PREG_SPLIT_DELIM_CAPTURE
@@ -219,6 +219,10 @@ function render_message_html(string $content): string
         }
         if (preg_match('/^\[net:(https:\/\/[^\[\s<>"\']{8,480})\]$/u', $part, $m)) {
             $out .= emoji_net_tag($m[1]);
+            continue;
+        }
+        if (preg_match('/^https:\/\/[^\s<>"\'\[\]]+\.(?i:gif|png|jpe?g|webp)(?:\?[^\s<>"\'\[\]]*)?$/u', $part)) {
+            $out .= emoji_net_tag($part);
             continue;
         }
         $out .= nl2br(h($part));

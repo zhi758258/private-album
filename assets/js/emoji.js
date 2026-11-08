@@ -9,16 +9,21 @@
     }
     function isHttps(url) {
         if (!url || url.length > 480 || url.length < 12) return false;
-        if (!/^https:\/\/[a-zA-Z0-9._~:/?#\[\]@!$&()*+,;=%\-]+$/.test(url)) return false;
+        if (/[\s<>"']/.test(url)) return false;
         try {
             var u = new URL(url);
             if (u.protocol !== 'https:') return false;
             if (!u.hostname || u.hostname.indexOf('.') < 0) return false;
             if (u.hostname === 'localhost') return false;
+            if (/^\d{1,3}(\.\d{1,3}){3}$/.test(u.hostname)) return false;
             return true;
         } catch (e) {
             return false;
         }
+    }
+    var IMG_RE = /^https:\/\/[^\s<>"'\[\]]+\.(?:[gG][iI][fF]|[pP][nN][gG]|[jJ][pP][eE]?[gG]|[wW][eE][bB][pP])(?:\?[^\s<>"'\[\]]*)?$/;
+    function looksImageUrl(url) {
+        return IMG_RE.test(url);
     }
     function faceHtml(item) {
         var name = esc(item.name || '');
@@ -28,7 +33,7 @@
     }
     function render(text) {
         var src = String(text || '');
-        var re = /(\[(?:qq|wx|dy):[^\[\]]{1,32}\]|\[net:https:\/\/[^\[\s<>"']{8,480}\])/g;
+        var re = /(\[(?:qq|wx|dy):[^\[\]]{1,32}\]|\[net:https:\/\/[^\[\s<>"']{8,480}\]|https:\/\/[^\s<>"'\[\]]+?\.(?:[gG][iI][fF]|[pP][nN][gG]|[jJ][pP][eE]?[gG]|[wW][eE][bB][pP])(?:\?[^\s<>"'\[\]]*)?)/g;
         var out = '';
         var last = 0;
         var m;
@@ -40,8 +45,10 @@
             if (pack && window.Emoji && window.Emoji.lookup) {
                 var item = window.Emoji.lookup[pack[1] + ':' + pack[2]];
                 out += item ? faceHtml(item) : nl(tok);
-            } else if (net && isHttps(net[1])) {
+            } else if (net) {
                 out += '<img class="emoji-sticker" src="' + esc(net[1]) + '" alt="表情" loading="lazy" referrerpolicy="no-referrer">';
+            } else if (looksImageUrl(tok) && isHttps(tok)) {
+                out += '<img class="emoji-sticker" src="' + esc(tok) + '" alt="表情" loading="lazy" referrerpolicy="no-referrer">';
             } else {
                 out += nl(tok);
             }
