@@ -627,6 +627,63 @@ function friend_unread_between(int $uid, int $otherId): int
     return (int) $stmt->fetchColumn();
 }
 
+function notification_add(int $userId, ?int $actorId, string $type, ?int $refId, string $content, string $link = ''): void
+{
+    if ($userId <= 0) {
+        return;
+    }
+    if ($actorId !== null && $actorId === $userId) {
+        return;
+    }
+    $stmt = db()->prepare('
+        INSERT INTO notifications (user_id, actor_id, type, ref_id, content, link, is_read, created_at)
+        VALUES (:user_id, :actor_id, :type, :ref_id, :content, :link, 0, :created_at)
+    ');
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':actor_id' => $actorId,
+        ':type' => $type,
+        ':ref_id' => $refId,
+        ':content' => mb_substr($content, 0, 255),
+        ':link' => mb_substr($link, 0, 255),
+        ':created_at' => now(),
+    ]);
+}
+
+function notifications_unread_count(int $uid): int
+{
+    $stmt = db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = :user_id AND is_read = 0');
+    $stmt->execute([':user_id' => $uid]);
+    return (int) $stmt->fetchColumn();
+}
+
+function notifications_recent(int $uid, int $limit = 20): array
+{
+    $limit = max(1, min(50, $limit));
+    $stmt = db()->prepare('
+        SELECT n.id, n.type, n.ref_id, n.content, n.link, n.is_read, n.created_at,
+               u.display_name AS actor_name, u.avatar AS actor_avatar
+        FROM notifications n
+        LEFT JOIN users u ON u.id = n.actor_id
+        WHERE n.user_id = :user_id
+        ORDER BY n.id DESC
+        LIMIT ' . $limit
+    );
+    $stmt->execute([':user_id' => $uid]);
+    return $stmt->fetchAll();
+}
+
+function notifications_mark_read(int $uid, ?int $id = null): void
+{
+    if ($id !== null && $id > 0) {
+        $stmt = db()->prepare('UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND id = :id');
+        $stmt->execute([':user_id' => $uid, ':id' => $id]);
+        return;
+    }
+    $stmt = db()->prepare('UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND is_read = 0');
+    $stmt->execute([':user_id' => $uid]);
+}
+
 function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool
 {
     if ($viewerId === $targetId) {

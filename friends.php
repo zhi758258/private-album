@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $del = db()->prepare('DELETE FROM friend_requests WHERE id = :id');
             $del->execute([':id' => (int) $reverse['id']]);
             add_friendship($uid, $toId);
+            notification_add($toId, $uid, 'friend_accept', null, $user['display_name'] . ' 接受了你的好友请求', '/chat.php?u=' . $uid);
             flash_set('ok', '已同意对方的好友请求，你们现在是好友了。');
             redirect('/friends.php');
         }
@@ -40,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $ins = db()->prepare('INSERT INTO friend_requests (from_user_id, to_user_id, created_at) VALUES (:from_user_id, :to_user_id, :created_at)');
         $ins->execute([':from_user_id' => $uid, ':to_user_id' => $toId, ':created_at' => now()]);
+        notification_add($toId, $uid, 'friend_request', null, $user['display_name'] . ' 请求添加你为好友', '/friends.php');
         flash_set('ok', '好友请求已发送。');
         redirect('/friends.php');
     }
@@ -71,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $del->execute([':id' => $reqId]);
         if ($action === 'accept') {
             add_friendship($uid, (int) $req['from_user_id']);
+            notification_add((int) $req['from_user_id'], $uid, 'friend_accept', null, $user['display_name'] . ' 接受了你的好友请求', '/chat.php?u=' . $uid);
             flash_set('ok', '已添加为好友。');
         } else {
             flash_set('ok', '已拒绝好友请求。');

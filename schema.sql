@@ -126,6 +126,27 @@ CREATE TABLE IF NOT EXISTS private_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- 消息提醒（留言、回复、好友请求、好友私信）
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    actor_id INT UNSIGNED NULL,
+    type VARCHAR(20) NOT NULL,
+    ref_id INT UNSIGNED NULL,
+    content VARCHAR(255) NOT NULL DEFAULT '',
+    link VARCHAR(255) NOT NULL DEFAULT '',
+    is_read TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_notifications_user (user_id, is_read),
+    KEY idx_notifications_created (created_at),
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_notifications_actor FOREIGN KEY (actor_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- 用户空间：心情说说 + 日志（默认好友可见）
 -- ============================================================
 

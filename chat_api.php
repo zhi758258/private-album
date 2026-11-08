@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':content' => $content,
         ':created_at' => $created,
     ]);
+    notification_add($otherId, $me, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $me);
     echo json_encode([
         'ok' => true,
         'message' => [
@@ -84,5 +85,7 @@ foreach ($rows as $r) {
 
 $mark = db()->prepare('UPDATE private_messages SET is_read = 1 WHERE receiver_id = :receiver_id AND sender_id = :sender_id AND is_read = 0');
 $mark->execute([':receiver_id' => $me, ':sender_id' => $otherId]);
+$markNotif = db()->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND actor_id = :actor_id AND type = 'message' AND is_read = 0");
+$markNotif->execute([':user_id' => $me, ':actor_id' => $otherId]);
 
 echo json_encode(['ok' => true, 'messages' => $messages, 'last' => $last], JSON_UNESCAPED_UNICODE);

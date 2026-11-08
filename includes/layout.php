@@ -130,9 +130,29 @@ function render_header(string $title, array $user, string $active = ''): void
                     <span class="brand-mark"></span>
                     <span class="brand-name"><?= h(app_name()) ?></span>
                 </a>
-                <button class="topbar-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
-                    <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-top') ?>
-                </button>
+                <div class="topbar-actions">
+                    <div class="notif" id="notif">
+                        <button class="notif-toggle" type="button" aria-label="消息提醒" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M18 16V11a6 6 0 1 0-12 0v5l-2 2h16z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+                            <span class="notif-dot" id="notifDot" hidden></span>
+                        </button>
+                        <div class="notif-panel" id="notifPanel" hidden>
+                            <div class="notif-head">
+                                <span>消息提醒</span>
+                                <div class="notif-head-actions">
+                                    <button type="button" class="notif-sound" id="notifSound" aria-pressed="true">声音：开</button>
+                                    <button type="button" class="notif-readall" id="notifReadAll">全部已读</button>
+                                </div>
+                            </div>
+                            <div class="notif-list" id="notifList">
+                                <div class="notif-empty">暂无新提醒</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="topbar-avatar js-avatar-edit" type="button" title="设置头像" aria-label="设置头像">
+                        <?= avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-top') ?>
+                    </button>
+                </div>
             </header>
             <main class="wrap" id="page">
                 <?php if ($flash): ?>
@@ -958,6 +978,201 @@ function render_footer(): void
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && !mask.hidden) close();
         });
+    })();
+    </script>
+    <script>
+    (function () {
+        var root = document.getElementById('notif');
+        if (!root) return;
+        var toggle = root.querySelector('.notif-toggle');
+        var panel = document.getElementById('notifPanel');
+        var dot = document.getElementById('notifDot');
+        var list = document.getElementById('notifList');
+        var readAll = document.getElementById('notifReadAll');
+        if (!toggle || !panel || !list) return;
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        var open = false;
+        var loaded = false;
+        var lastUnread = null;
+        var soundBtn = document.getElementById('notifSound');
+        var soundOn = true;
+        try { soundOn = localStorage.getItem('notif_sound') !== '0'; } catch (e) {}
+        if (soundBtn) soundBtn.textContent = soundOn ? '声音：开' : '声音：关';
+        if (soundBtn) soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+
+        var audioCtx = null;
+        function ensureAudio() {
+            if (!audioCtx) {
+                var Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                try { audioCtx = new Ctx(); } catch (e) { return null; }
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(function () {});
+            }
+            return audioCtx;
+        }
+        function tone(ctx, freq, start, dur, peak) {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(peak, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + dur + 0.02);
+        }
+        function playDing() {
+            if (!soundOn) return;
+            var ctx = ensureAudio();
+            if (!ctx) return;
+            var t = ctx.currentTime;
+            tone(ctx, 987.77, t, 0.18, 0.18);
+            tone(ctx, 659.25, t + 0.16, 0.26, 0.16);
+        }
+        window.playDing = playDing;
+        document.addEventListener('pointerdown', function once() {
+            ensureAudio();
+            document.removeEventListener('pointerdown', once);
+        }, { once: true });
+        if (soundBtn) {
+            soundBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                soundOn = !soundOn;
+                try { localStorage.setItem('notif_sound', soundOn ? '1' : '0'); } catch (err) {}
+                soundBtn.textContent = soundOn ? '声音：开' : '声音：关';
+                soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+                if (soundOn) playDing();
+            });
+        }
+
+        function setDot(n) {
+            if (!dot) return;
+            if (n > 0) {
+                dot.hidden = false;
+                dot.textContent = n > 99 ? '99+' : String(n);
+            } else {
+                dot.hidden = true;
+                dot.textContent = '';
+            }
+        }
+        function handleUnread(n) {
+            setDot(n);
+            if (lastUnread !== null && n > lastUnread) playDing();
+            lastUnread = n;
+        }
+        function esc(s) {
+            var d = document.createElement('div');
+            d.textContent = s == null ? '' : s;
+            return d.innerHTML;
+        }
+        function renderItems(items) {
+            list.innerHTML = '';
+            if (!items || !items.length) {
+                var e = document.createElement('div');
+                e.className = 'notif-empty';
+                e.textContent = '暂无新提醒';
+                list.appendChild(e);
+                return;
+            }
+            items.forEach(function (it) {
+                var row = document.createElement('a');
+                row.className = 'notif-item' + (it.is_read ? '' : ' is-unread');
+                row.href = it.link || 'javascript:void(0)';
+                row.setAttribute('data-id', String(it.id));
+                var av = document.createElement('span');
+                av.className = 'notif-avatar';
+                av.innerHTML = it.actor_avatar_html || '';
+                var body = document.createElement('span');
+                body.className = 'notif-body';
+                var txt = document.createElement('span');
+                txt.className = 'notif-text';
+                txt.innerHTML = esc(it.content);
+                var time = document.createElement('span');
+                time.className = 'notif-time';
+                time.textContent = it.created_at;
+                body.appendChild(txt);
+                body.appendChild(time);
+                row.appendChild(av);
+                row.appendChild(body);
+                row.addEventListener('click', function () {
+                    markRead(it.id);
+                });
+                list.appendChild(row);
+            });
+        }
+        function fetchList() {
+            fetch('/notifications_api.php', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json().catch(function () { return null; }); })
+                .then(function (d) {
+                    if (!d || !d.ok) return;
+                    handleUnread(d.unread);
+                    renderItems(d.items);
+                })
+                .catch(function () {});
+        }
+        function poll() {
+            fetch('/notifications_api.php', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json().catch(function () { return null; }); })
+                .then(function (d) {
+                    if (!d || !d.ok) return;
+                    handleUnread(d.unread);
+                    if (open) renderItems(d.items);
+                })
+                .catch(function () {});
+        }
+        function markRead(id) {
+            var fd = new FormData();
+            fd.append('action', 'read');
+            fd.append('id', id);
+            fd.append('csrf', csrf);
+            fetch('/notifications_api.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json().catch(function () { return null; }); })
+                .then(function (d) { if (d && d.ok) handleUnread(d.unread); })
+                .catch(function () {});
+        }
+        toggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            open = !open;
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open && !loaded) {
+                loaded = true;
+                fetchList();
+            } else if (open) {
+                fetchList();
+            }
+        });
+        if (readAll) {
+            readAll.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var fd = new FormData();
+                fd.append('action', 'read_all');
+                fd.append('csrf', csrf);
+                fetch('/notifications_api.php', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json().catch(function () { return null; }); })
+                    .then(function (d) {
+                        if (!d || !d.ok) return;
+                        setDot(0);
+                        lastUnread = 0;
+                        list.querySelectorAll('.notif-item').forEach(function (el) { el.classList.remove('is-unread'); });
+                    })
+                    .catch(function () {});
+            });
+        }
+        document.addEventListener('click', function (e) {
+            if (!open) return;
+            if (root.contains(e.target)) return;
+            open = false;
+            panel.hidden = true;
+            toggle.setAttribute('aria-expanded', 'false');
+        });
+        poll();
+        setInterval(poll, 12000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
     })();
     </script>
 </body>

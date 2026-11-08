@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $parent = null;
     if ($parentId > 0) {
-        $stmt = db()->prepare('SELECT id, parent_id FROM messages WHERE id = :id');
+        $stmt = db()->prepare('SELECT id, parent_id, user_id FROM messages WHERE id = :id');
         $stmt->execute([':id' => $parentId]);
         $parent = $stmt->fetch();
         if (!$parent) {
@@ -36,6 +36,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':content' => mb_substr($content, 0, 1000),
         ':created_at' => now(),
     ]);
+    $newId = (int) db()->lastInsertId();
+    $excerpt = mb_substr($content, 0, 60);
+    if ($parentId > 0) {
+        $authorId = (int) ($parent['user_id'] ?? 0);
+        if ($authorId > 0) {
+            notification_add($authorId, (int) $user['id'], 'reply', $newId, $user['display_name'] . ' 回复了你的留言：' . $excerpt, '/board.php#msg-' . $parentId);
+        }
+    } else {
+        $others = db()->prepare('SELECT id FROM users WHERE id <> :me');
+        $others->execute([':me' => (int) $user['id']]);
+        foreach ($others->fetchAll() as $row) {
+            notification_add((int) $row['id'], (int) $user['id'], 'board', $newId, $user['display_name'] . ' 发布了一条新留言：' . $excerpt, '/board.php#msg-' . $newId);
+        }
+    }
     flash_set('ok', $parentId > 0 ? '回复已发布。' : '留言已发布。');
     redirect('/board.php');
 }

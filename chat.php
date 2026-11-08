@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':content' => mb_substr($content, 0, 2000),
         ':created_at' => now(),
     ]);
+    notification_add($otherId, $uid, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $uid);
     redirect('/chat.php?u=' . $otherId);
 }
 
@@ -56,6 +57,8 @@ foreach ($messages as $m) {
 
 $mark = db()->prepare('UPDATE private_messages SET is_read = 1 WHERE receiver_id = :receiver_id AND sender_id = :sender_id AND is_read = 0');
 $mark->execute([':receiver_id' => $uid, ':sender_id' => $otherId]);
+$markNotif = db()->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND actor_id = :actor_id AND type = 'message' AND is_read = 0");
+$markNotif->execute([':user_id' => $uid, ':actor_id' => $otherId]);
 
 $selfAvatar = avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-sm');
 $otherAvatar = avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-sm');
@@ -150,14 +153,17 @@ window.CHAT = {
     function append(list) {
         if (!list || !list.length) return;
         var stick = nearBottom();
+        var incoming = false;
         list.forEach(function (m) {
             if (box.querySelector('.chat-line[data-id="' + m.id + '"]')) return;
             box.appendChild(lineEl(m));
             if (m.id > last) last = m.id;
+            if (!m.mine) incoming = true;
         });
         var empty = box.querySelector('.empty');
         if (empty) empty.remove();
         if (stick) box.scrollTop = box.scrollHeight;
+        if (incoming && window.playDing) window.playDing();
     }
     function poll() {
         fetch('/chat_api.php?u=' + cfg.user + '&after=' + last, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })

@@ -39,12 +39,14 @@ if ($action === 'request') {
             $del = db()->prepare('DELETE FROM friend_requests WHERE id = :id');
             $del->execute([':id' => (int) $reverse['id']]);
             add_friendship($me, $otherId);
+            notification_add($otherId, $me, 'friend_accept', null, $user['display_name'] . ' 接受了你的好友请求', '/chat.php?u=' . $me);
             $state = 'friend';
         } elseif (friend_request_find($me, $otherId)) {
             $state = 'sent';
         } else {
             $ins = db()->prepare('INSERT INTO friend_requests (from_user_id, to_user_id, created_at) VALUES (:from_user_id, :to_user_id, :created_at)');
             $ins->execute([':from_user_id' => $me, ':to_user_id' => $otherId, ':created_at' => now()]);
+            notification_add($otherId, $me, 'friend_request', null, $user['display_name'] . ' 请求添加你为好友', '/friends.php');
             $state = 'sent';
         }
     }
@@ -56,6 +58,7 @@ if ($action === 'request') {
     $del = db()->prepare('DELETE FROM friend_requests WHERE id = :id');
     $del->execute([':id' => (int) $req['id']]);
     add_friendship($me, $otherId);
+    notification_add($otherId, $me, 'friend_accept', null, $user['display_name'] . ' 接受了你的好友请求', '/chat.php?u=' . $me);
     $state = 'friend';
 } elseif ($action === 'remove') {
     if (!are_friends($me, $otherId)) {
