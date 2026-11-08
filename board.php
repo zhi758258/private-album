@@ -9,7 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $content = trim((string) ($_POST['content'] ?? ''));
     $parentId = (int) ($_POST['parent_id'] ?? 0);
-    if ($content === '') {
+    [$voiceFile, $voiceDur] = voice_from_post($_POST, (int) $user['id']);
+    if ($content === '' && $voiceFile === null) {
         flash_set('err', '留言不能为空。');
         redirect('/board.php');
     }
@@ -27,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $stmt = db()->prepare('
-        INSERT INTO messages (user_id, parent_id, content, loc_lat, loc_lng, loc_name, created_at)
-        VALUES (:user_id, :parent_id, :content, :loc_lat, :loc_lng, :loc_name, :created_at)
+        INSERT INTO messages (user_id, parent_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, created_at)
+        VALUES (:user_id, :parent_id, :content, :loc_lat, :loc_lng, :loc_name, :voice_file, :voice_dur, :created_at)
     ');
     [$locLat, $locLng, $locName] = location_from_post($_POST);
     $stmt->execute([
@@ -38,10 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':loc_lat' => $locLat,
         ':loc_lng' => $locLng,
         ':loc_name' => $locName,
+        ':voice_file' => $voiceFile,
+        ':voice_dur' => $voiceDur,
         ':created_at' => now(),
     ]);
     $newId = (int) db()->lastInsertId();
-    $excerpt = mb_substr($content, 0, 60);
+    $excerpt = $content !== '' ? mb_substr($content, 0, 60) : '[语音]';
     if ($parentId > 0) {
         $authorId = (int) ($parent['user_id'] ?? 0);
         if ($authorId > 0) {
@@ -81,10 +84,10 @@ render_header(nav_label('board'), $user, 'board');
 <section class="page-head">
     <h1><?= h(nav_label('board')) ?></h1>
 </section>
-<form class="panel" method="post" data-location>
+<form class="panel" method="post" data-location data-voice>
     <?= csrf_field() ?>
     <label for="content">写一条留言</label>
-    <textarea id="content" name="content" maxlength="1000" required placeholder="最多 1000 字，可点表情或打字搜表情" data-emoji></textarea>
+    <textarea id="content" name="content" maxlength="1000" placeholder="最多 1000 字，可点表情或打字搜表情" data-emoji></textarea>
     <button type="submit">发布</button>
 </form>
 <?php if (!$threads): ?>
@@ -98,6 +101,7 @@ render_header(nav_label('board'), $user, 'board');
             <div class="msg-main">
                 <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
                 <p class="msg-text"><?= render_message_html($msg['content']) ?></p>
+                <?= voice_html($msg['voice_file'] ?? null, (int) ($msg['voice_dur'] ?? 0)) ?>
                 <?= location_chip_html($msg['loc_lat'] ?? null, $msg['loc_lng'] ?? null, $msg['loc_name'] ?? '') ?>
                 <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
                     <article class="msg reply">
@@ -107,14 +111,15 @@ render_header(nav_label('board'), $user, 'board');
                         <div class="msg-main">
                             <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
                             <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
+                            <?= voice_html($reply['voice_file'] ?? null, (int) ($reply['voice_dur'] ?? 0)) ?>
                             <?= location_chip_html($reply['loc_lat'] ?? null, $reply['loc_lng'] ?? null, $reply['loc_name'] ?? '') ?>
                         </div>
                     </article>
                 <?php endforeach; ?>
-                <form class="reply-form" method="post" data-location>
+                <form class="reply-form" method="post" data-location data-voice>
                     <?= csrf_field() ?>
                     <input type="hidden" name="parent_id" value="<?= (int) $msg['id'] ?>">
-                    <textarea name="content" maxlength="1000" required placeholder="回复 <?= h($msg['display_name']) ?>" data-emoji></textarea>
+                    <textarea name="content" maxlength="1000" placeholder="回复 <?= h($msg['display_name']) ?>" data-emoji></textarea>
                     <button type="submit">回复</button>
                 </form>
             </div>

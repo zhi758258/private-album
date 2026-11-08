@@ -23,11 +23,12 @@ if (!$other) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $content = trim((string) ($_POST['content'] ?? ''));
-    if ($content === '') {
+    [$voiceFile, $voiceDur] = voice_from_post($_POST, $uid);
+    if ($content === '' && $voiceFile === null) {
         flash_set('err', '消息不能为空。');
         redirect('/chat.php?u=' . $otherId);
     }
-    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, 0, :created_at)');
+    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, :voice_file, :voice_dur, 0, :created_at)');
     [$locLat, $locLng, $locName] = location_from_post($_POST);
     $ins->execute([
         ':sender_id' => $uid,
@@ -36,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':loc_lat' => $locLat,
         ':loc_lng' => $locLng,
         ':loc_name' => $locName,
+        ':voice_file' => $voiceFile,
+        ':voice_dur' => $voiceDur,
         ':created_at' => now(),
     ]);
     notification_add($otherId, $uid, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $uid);
@@ -43,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $stmt = db()->prepare('
-    SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at FROM private_messages
+    SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, created_at FROM private_messages
     WHERE (sender_id = :me AND receiver_id = :other)
        OR (sender_id = :other2 AND receiver_id = :me2)
     ORDER BY id ASC
@@ -92,6 +95,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
                 <?php if (!$mine): ?><?= $otherAvatar ?><?php endif; ?>
                 <div class="chat-bubble">
                     <div class="chat-text"><?= render_message_html($m['content']) ?></div>
+                    <?= voice_html($m['voice_file'] ?? null, (int) ($m['voice_dur'] ?? 0)) ?>
                     <?= location_chip_html($m['loc_lat'] ?? null, $m['loc_lng'] ?? null, $m['loc_name'] ?? '') ?>
                     <div class="chat-time"><?= h($m['created_at']) ?></div>
                 </div>
@@ -101,9 +105,9 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
     <?php endif; ?>
 </div>
 
-<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location>
+<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location data-voice>
     <?= csrf_field() ?>
-    <textarea id="content" name="content" maxlength="2000" required placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
+    <textarea id="content" name="content" maxlength="2000" placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
     <button type="submit">发送</button>
 </form>
 <script>
@@ -136,6 +140,11 @@ window.CHAT = {
         if (window.Emoji && window.Emoji.render) text.innerHTML = window.Emoji.render(msg.content);
         else text.textContent = msg.content;
         bubble.appendChild(text);
+        if (msg.voice_html) {
+            var vbWrap = document.createElement('div');
+            vbWrap.innerHTML = msg.voice_html;
+            if (vbWrap.firstElementChild) bubble.appendChild(vbWrap.firstElementChild);
+        }
         if (msg.loc_html) {
             var locWrap = document.createElement('div');
             locWrap.innerHTML = msg.loc_html;
@@ -183,12 +192,14 @@ window.CHAT = {
     }
     function send() {
         var val = ta.value.trim();
-        if (val === '' || sending) return;
+        var voiceEl = form.querySelector('input[name="voice_file"]');
+        var hasVoice = !!(voiceEl && voiceEl.value);
+        if ((val === '' && !hasVoice) || sending) return;
         sending = true;
         var fd = new FormData();
         fd.append('u', cfg.user);
         fd.append('content', val);
-        ['loc_lat', 'loc_lng', 'loc_name'].forEach(function (n) {
+        ['loc_lat', 'loc_lng', 'loc_name', 'voice_file', 'voice_dur'].forEach(function (n) {
             var el = form.querySelector('input[name="' + n + '"]');
             if (el && el.value) fd.append(n, el.value);
         });
@@ -199,6 +210,7 @@ window.CHAT = {
                 if (d && d.ok && d.message) {
                     ta.value = '';
                     if (window.SiteLocation) window.SiteLocation.reset(form);
+                    if (window.SiteVoice) window.SiteVoice.reset(form);
                     append([d.message]);
                     box.scrollTop = box.scrollHeight;
                 }

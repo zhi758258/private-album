@@ -10,9 +10,11 @@ const UPLOAD_DIR = __DIR__ . '/../uploads';
 const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
 const AVATAR_DIR = UPLOAD_DIR . '/avatars';
+const VOICE_DIR = UPLOAD_DIR . '/voice';
 const CONFIG_FILE = DATA_DIR . '/config.php';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const MAX_VOICE_BYTES = 6 * 1024 * 1024;
 const ALLOWED_MIME = [
     'image/jpeg' => 'jpg',
     'image/png' => 'png',
@@ -41,6 +43,9 @@ if (!is_dir(UPLOAD_DIR)) {
 }
 if (!is_dir(AVATAR_DIR)) {
     mkdir(AVATAR_DIR, 0755, true);
+}
+if (!is_dir(VOICE_DIR)) {
+    mkdir(VOICE_DIR, 0755, true);
 }
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
@@ -122,6 +127,11 @@ function init_schema(PDO $pdo): void
                 ADD COLUMN loc_lat DECIMAL(10,7) NULL,
                 ADD COLUMN loc_lng DECIMAL(10,7) NULL,
                 ADD COLUMN loc_name VARCHAR(120) NOT NULL DEFAULT ''");
+        }
+        if (!mysql_column_exists($pdo, $locTable, 'voice_file')) {
+            $pdo->exec("ALTER TABLE `{$locTable}`
+                ADD COLUMN voice_file VARCHAR(100) NULL,
+                ADD COLUMN voice_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0");
         }
     }
     if (!mysql_column_exists($pdo, 'users', 'avatar')) {
@@ -743,6 +753,86 @@ function location_chip_html($lat, $lng, ?string $name = ''): string
     $title = number_format($lat, 5, '.', '') . ', ' . number_format($lng, 5, '.', '');
     return '<a class="loc-chip" href="' . h($url) . '" target="_blank" rel="noopener noreferrer" title="' . h($title) . '">'
         . location_icon_svg() . '<span class="loc-label">' . h($label) . '</span></a>';
+}
+
+function fmt_duration(int $seconds): string
+{
+    $seconds = max(0, $seconds);
+    return sprintf('%d:%02d', intdiv($seconds, 60), $seconds % 60);
+}
+
+function voice_from_post(array $post, ?int $ownerId = null): array
+{
+    $file = basename((string) ($post['voice_file'] ?? ''));
+    $dur = (int) ($post['voice_dur'] ?? 0);
+    if ($file === '' || !preg_match('/^v(\d+)_[a-f0-9]{24}\.(webm|ogg|m4a|mp3|wav|aac)$/', $file, $m)) {
+        return [null, 0];
+    }
+    if ($ownerId !== null && (int) $m[1] !== $ownerId) {
+        return [null, 0];
+    }
+    $realDir = realpath(VOICE_DIR);
+    $realFile = realpath(VOICE_DIR . '/' . $file);
+    if ($realDir === false || $realFile === false || !str_starts_with($realFile, $realDir . DIRECTORY_SEPARATOR) || !is_file($realFile)) {
+        return [null, 0];
+    }
+    if ($dur < 0) {
+        $dur = 0;
+    }
+    if ($dur > 600) {
+        $dur = 600;
+    }
+    return [$file, $dur];
+}
+
+function voice_html(?string $file, int $dur = 0): string
+{
+    if ($file === null || $file === '') {
+        return '';
+    }
+    if (!preg_match('/^v\d+_[a-f0-9]{24}\.(webm|ogg|m4a|mp3|wav|aac)$/', $file)) {
+        return '';
+    }
+    $src = '/voice.php?f=' . rawurlencode($file);
+    $dur = max(0, $dur);
+    $label = $dur > 0 ? fmt_duration($dur) : '语音';
+    return '<button type="button" class="voice-msg" data-src="' . h($src) . '" data-dur="' . $dur . '" aria-label="播放语音">'
+        . '<span class="voice-play" aria-hidden="true">'
+        . '<svg class="vp-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+        . '<svg class="vp-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>'
+        . '</span>'
+        . '<span class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>'
+        . '<span class="voice-dur">' . h($label) . '</span>'
+        . '</button>';
+}
+
+function audio_magic_ok(string $path, string $ext): bool
+{
+    $fp = @fopen($path, 'rb');
+    if ($fp === false) {
+        return false;
+    }
+    $head = (string) fread($fp, 16);
+    fclose($fp);
+    if ($head === '') {
+        return false;
+    }
+    switch ($ext) {
+        case 'webm':
+            return strncmp($head, "\x1A\x45\xDF\xA3", 4) === 0;
+        case 'ogg':
+            return strncmp($head, 'OggS', 4) === 0;
+        case 'm4a':
+            return strlen($head) >= 8 && substr($head, 4, 4) === 'ftyp';
+        case 'wav':
+            return strncmp($head, 'RIFF', 4) === 0;
+        case 'mp3':
+            return strncmp($head, 'ID3', 3) === 0
+                || (strlen($head) >= 2 && ord($head[0]) === 0xFF && (ord($head[1]) & 0xE0) === 0xE0);
+        case 'aac':
+            return strlen($head) >= 2 && ord($head[0]) === 0xFF && (ord($head[1]) & 0xF6) === 0xF0;
+    }
+    return false;
 }
 
 function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool

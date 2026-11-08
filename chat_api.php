@@ -20,13 +20,14 @@ if ($otherId <= 0 || $otherId === $me || !are_friends($me, $otherId)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $content = trim((string) ($_POST['content'] ?? ''));
-    if ($content === '') {
+    [$voiceFile, $voiceDur] = voice_from_post($_POST, $me);
+    if ($content === '' && $voiceFile === null) {
         json_fail('消息不能为空。');
     }
     $content = mb_substr($content, 0, 2000);
     $created = now();
     [$locLat, $locLng, $locName] = location_from_post($_POST);
-    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, 0, :created_at)');
+    $ins = db()->prepare('INSERT INTO private_messages (sender_id, receiver_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, is_read, created_at) VALUES (:sender_id, :receiver_id, :content, :loc_lat, :loc_lng, :loc_name, :voice_file, :voice_dur, 0, :created_at)');
     $ins->execute([
         ':sender_id' => $me,
         ':receiver_id' => $otherId,
@@ -34,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':loc_lat' => $locLat,
         ':loc_lng' => $locLng,
         ':loc_name' => $locName,
+        ':voice_file' => $voiceFile,
+        ':voice_dur' => $voiceDur,
         ':created_at' => $created,
     ]);
     notification_add($otherId, $me, 'message', null, $user['display_name'] . ' 给你发来一条私信', '/chat.php?u=' . $me);
@@ -43,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => (int) db()->lastInsertId(),
             'mine' => true,
             'content' => $content,
+            'voice_html' => voice_html($voiceFile, $voiceDur),
             'loc_html' => location_chip_html($locLat, $locLng, $locName),
             'created_at' => $created,
         ],
@@ -53,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $after = (int) ($_GET['after'] ?? 0);
 if ($after > 0) {
     $stmt = db()->prepare('
-        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at
+        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, created_at
         FROM private_messages
         WHERE ((sender_id = :me AND receiver_id = :other) OR (sender_id = :other2 AND receiver_id = :me2))
           AND id > :after
@@ -63,7 +67,7 @@ if ($after > 0) {
     $stmt->execute([':me' => $me, ':other' => $otherId, ':other2' => $otherId, ':me2' => $me, ':after' => $after]);
 } else {
     $stmt = db()->prepare('
-        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, created_at
+        SELECT id, sender_id, content, loc_lat, loc_lng, loc_name, voice_file, voice_dur, created_at
         FROM private_messages
         WHERE (sender_id = :me AND receiver_id = :other) OR (sender_id = :other2 AND receiver_id = :me2)
         ORDER BY id ASC
@@ -84,6 +88,7 @@ foreach ($rows as $r) {
         'id' => $rid,
         'mine' => (int) $r['sender_id'] === $me,
         'content' => $r['content'],
+        'voice_html' => voice_html($r['voice_file'] ?? null, (int) ($r['voice_dur'] ?? 0)),
         'loc_html' => location_chip_html($r['loc_lat'] ?? null, $r['loc_lng'] ?? null, $r['loc_name'] ?? ''),
         'created_at' => $r['created_at'],
     ];
