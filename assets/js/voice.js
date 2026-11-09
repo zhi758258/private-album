@@ -137,12 +137,19 @@
         var composer = ta && ta.closest ? ta.closest('.emoji-composer') : null;
         var anchor = composer || ta || form;
 
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'emoji-toggle voice-toggle';
-        btn.title = '按住说话';
-        btn.setAttribute('aria-label', '按住录音');
-        btn.innerHTML = MIC;
+        var external = form.querySelector('[data-hold-talk]');
+        var btn;
+        if (external) {
+            btn = external;
+            btn.title = '按住说话';
+        } else {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'emoji-toggle voice-toggle';
+            btn.title = '按住说话';
+            btn.setAttribute('aria-label', '按住录音');
+            btn.innerHTML = MIC;
+        }
 
         var preview = document.createElement('div');
         preview.className = 'voice-preview';
@@ -151,16 +158,20 @@
             + '<audio class="voice-audio" controls preload="metadata"></audio>'
             + '<button type="button" class="voice-clear" aria-label="清除语音">×</button>';
 
-        var bar = composer ? composer.querySelector('.emoji-bar') : null;
-        if (bar) {
-            bar.appendChild(btn);
-            composer.parentNode.insertBefore(preview, composer.nextSibling);
+        if (external) {
+            form.insertBefore(preview, form.firstChild);
         } else {
-            var voiceBar = document.createElement('div');
-            voiceBar.className = 'emoji-bar voice-bar';
-            voiceBar.appendChild(btn);
-            anchor.parentNode.insertBefore(voiceBar, anchor.nextSibling);
-            anchor.parentNode.insertBefore(preview, voiceBar.nextSibling);
+            var bar = composer ? composer.querySelector('.emoji-bar') : null;
+            if (bar) {
+                bar.appendChild(btn);
+                composer.parentNode.insertBefore(preview, composer.nextSibling);
+            } else {
+                var voiceBar = document.createElement('div');
+                voiceBar.className = 'emoji-bar voice-bar';
+                voiceBar.appendChild(btn);
+                anchor.parentNode.insertBefore(voiceBar, anchor.nextSibling);
+                anchor.parentNode.insertBefore(preview, voiceBar.nextSibling);
+            }
         }
 
         var recRow = preview.querySelector('.voice-rec');

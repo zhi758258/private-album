@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function render_header(string $title, array $user, string $active = ''): void
+function render_header(string $title, array $user, string $active = '', string $bodyClass = ''): void
 {
     $flash = flash_get();
     $isAdmin = $user['role'] === 'admin';
@@ -22,6 +22,7 @@ function render_header(string $title, array $user, string $active = ''): void
         'files' => '<path d="M4 5h5l2 2h9v12H4z"/><path d="M4 9h16"/>',
         'admin_settings' => '<path d="M4 8h7M4 14h16"/><circle cx="14" cy="8" r="2"/><circle cx="9" cy="14" r="2"/>',
         'settings' => '<path d="M4 8h7M4 14h16"/><circle cx="14" cy="8" r="2"/><circle cx="9" cy="14" r="2"/>',
+        'profile' => '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>',
     ];
     $baseNav = [
         ['key' => 'home', 'href' => '/index.php'],
@@ -40,7 +41,7 @@ function render_header(string $title, array $user, string $active = ''): void
         ['key' => 'files', 'href' => '/files.php'],
         ['key' => 'admin_settings', 'href' => '/admin_settings.php'],
     ];
-    $userNav = [['key' => 'settings', 'href' => '/settings.php']];
+    $userNav = [['key' => 'profile', 'href' => '/profile.php'], ['key' => 'settings', 'href' => '/settings.php']];
     $navItems = $isAdmin ? array_merge($baseNav, $adminNav) : array_merge($baseNav, $userNav);
 
     $themes = [
@@ -68,7 +69,7 @@ function render_header(string $title, array $user, string $active = ''): void
     <script src="/assets/js/capture.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/capture.js') ?>" defer></script>
     <script src="/assets/js/call.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/call.js') ?>" defer></script>
 </head>
-<body data-user-id="<?= (int) $user['id'] ?>">
+<body data-user-id="<?= (int) $user['id'] ?>"<?= $bodyClass !== '' ? ' class="' . h($bodyClass) . '"' : '' ?>>
     <div class="grain"></div>
     <div class="app-shell">
         <div class="nav-mask" hidden></div>
@@ -902,7 +903,10 @@ function render_footer(): void
         function renderActions(data) {
             actionsEl.innerHTML = '';
             if (data.state === 'self') {
-                actionsEl.appendChild(makeBtn('我的空间', '', function () {
+                actionsEl.appendChild(makeBtn('个人中心', '', function () {
+                    window.location.href = '/profile.php';
+                }));
+                actionsEl.appendChild(makeBtn('我的空间', 'ghost-btn', function () {
                     window.location.href = '/space.php';
                 }));
                 return;

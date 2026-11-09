@@ -31,6 +31,7 @@ const NAV_DEFAULTS = [
     'album' => '我的相册',
     'memo' => '备忘录',
     'ddz' => '斗地主',
+    'profile' => '个人中心',
     'settings' => '设置',
     'admin' => '用户管理',
     'admin_cards' => '卡密管理',

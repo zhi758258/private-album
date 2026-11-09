@@ -73,19 +73,19 @@ $markNotif->execute([':user_id' => $uid, ':actor_id' => $otherId]);
 $selfAvatar = avatar_html($user['avatar'] ?? null, $user['display_name'], 'avatar avatar-sm');
 $otherAvatar = avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-sm');
 
-render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
+render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends', 'chat-page');
 ?>
-<section class="page-head chat-head">
-    <a class="btn ghost-btn" href="/friends.php">← 好友列表</a>
-    <div class="chat-peer">
-        <button type="button" class="js-user avatar-btn" data-user-id="<?= $otherId ?>">
-            <?= avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-md') ?>
-        </button>
-        <div>
-            <div class="friend-name"><?= h($other['display_name']) ?></div>
-            <div class="friend-sub">@<?= h($other['username']) ?></div>
-        </div>
-    </div>
+<section class="chat-head">
+    <a class="chat-back" href="/friends.php" aria-label="返回好友列表">
+        <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <button type="button" class="js-user chat-peer" data-user-id="<?= $otherId ?>">
+        <?= avatar_html($other['avatar'] ?? null, $other['display_name'], 'avatar avatar-md') ?>
+        <span class="chat-peer-text">
+            <span class="friend-name"><?= h($other['display_name']) ?></span>
+            <span class="friend-sub">@<?= h($other['username']) ?></span>
+        </span>
+    </button>
 </section>
 
 <div class="chat-box" id="chatBox">
@@ -95,7 +95,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
         <?php foreach ($messages as $m):
             $mine = (int) $m['sender_id'] === $uid; ?>
             <div class="chat-line <?= $mine ? 'is-mine' : 'is-theirs' ?>" data-id="<?= (int) $m['id'] ?>">
-                <?php if (!$mine): ?><?= $otherAvatar ?><?php endif; ?>
+                <?php if (!$mine): ?><button type="button" class="js-user chat-avatar-btn" data-user-id="<?= $otherId ?>"><?= $otherAvatar ?></button><?php endif; ?>
                 <div class="chat-bubble">
                     <div class="chat-text"><?= render_message_html($m['content']) ?></div>
                     <?= media_html($m['media_file'] ?? null, (int) ($m['media_dur'] ?? 0)) ?>
@@ -103,20 +103,34 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
                     <?= location_chip_html($m['loc_lat'] ?? null, $m['loc_lng'] ?? null, $m['loc_name'] ?? '') ?>
                     <div class="chat-time"><?= h($m['created_at']) ?></div>
                 </div>
-                <?php if ($mine): ?><?= $selfAvatar ?><?php endif; ?>
+                <?php if ($mine): ?><button type="button" class="js-user chat-avatar-btn" data-user-id="<?= $uid ?>"><?= $selfAvatar ?></button><?php endif; ?>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
 
-<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location data-voice data-capture data-call data-call-user="<?= $otherId ?>" data-call-name="<?= h($other['display_name']) ?>">
+<form class="chat-form wc-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location data-voice data-capture data-call data-call-user="<?= $otherId ?>" data-call-name="<?= h($other['display_name']) ?>" data-wc>
     <?= csrf_field() ?>
-    <textarea id="content" name="content" maxlength="2000" placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
-    <button type="submit">发送</button>
+    <div class="wc-attach" id="wcAttach"></div>
+    <div class="wc-bar">
+        <button type="button" class="wc-round wc-mode" data-wc-mode title="语音" aria-label="切换语音输入">
+            <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M18.5 11.5a6.5 6.5 0 0 1-13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="wc-input">
+            <textarea id="content" name="content" maxlength="2000" rows="1" placeholder="发消息…" aria-label="消息内容" data-emoji></textarea>
+            <button type="button" class="wc-hold" data-hold-talk hidden>按住 说话</button>
+        </div>
+        <button type="button" class="wc-round wc-plus" data-wc-plus title="更多" aria-label="更多功能">
+            <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button type="submit" class="wc-send">发送</button>
+    </div>
+    <div class="wc-panel" id="wcPanel" hidden></div>
 </form>
 <script>
 window.CHAT = {
     user: <?= (int) $otherId ?>,
+    self: <?= (int) $uid ?>,
     last: <?= (int) $last ?>,
     csrf: <?= json_encode(csrf_token(), JSON_UNESCAPED_UNICODE) ?>,
     selfAvatar: <?= json_encode($selfAvatar, JSON_UNESCAPED_UNICODE) ?>,
@@ -163,14 +177,19 @@ window.CHAT = {
         time.className = 'chat-time';
         time.textContent = msg.created_at;
         bubble.appendChild(time);
+        var avatarBtn = document.createElement('button');
+        avatarBtn.type = 'button';
+        avatarBtn.className = 'js-user chat-avatar-btn';
+        avatarBtn.setAttribute('data-user-id', msg.mine ? String(cfg.self) : String(cfg.user));
         var wrap = document.createElement('span');
         wrap.innerHTML = msg.mine ? cfg.selfAvatar : cfg.otherAvatar;
         var avatar = wrap.firstElementChild;
+        if (avatar) avatarBtn.appendChild(avatar);
         if (msg.mine) {
             line.appendChild(bubble);
-            if (avatar) line.appendChild(avatar);
+            line.appendChild(avatarBtn);
         } else {
-            if (avatar) line.appendChild(avatar);
+            line.appendChild(avatarBtn);
             line.appendChild(bubble);
         }
         return line;
@@ -245,6 +264,71 @@ window.CHAT = {
     ta.focus();
     setInterval(poll, 4000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+})();
+</script>
+<script>
+(function () {
+    var form = document.getElementById('chatForm');
+    if (!form) return;
+    var panel = document.getElementById('wcPanel');
+    var modeBtn = form.querySelector('[data-wc-mode]');
+    var plusBtn = form.querySelector('[data-wc-plus]');
+    var ta = document.getElementById('content');
+    var hold = form.querySelector('[data-hold-talk]');
+
+    function moveBar() {
+        var composer = form.querySelector('.emoji-composer');
+        var bar = composer ? composer.querySelector('.emoji-bar') : null;
+        if (bar && panel && bar.parentNode !== panel) {
+            panel.appendChild(bar);
+        }
+        var attach = document.getElementById('wcAttach');
+        if (attach) {
+            ['.media-preview', '.loc-preview', '.voice-preview'].forEach(function (sel) {
+                var el = form.querySelector(sel);
+                if (el && el.parentNode !== attach) attach.appendChild(el);
+            });
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(moveBar, 0); });
+    } else {
+        setTimeout(moveBar, 0);
+    }
+    window.addEventListener('load', moveBar);
+
+    function setVoiceMode(on) {
+        form.classList.toggle('is-voice', on);
+        if (ta) ta.hidden = on;
+        if (hold) hold.hidden = !on;
+        if (modeBtn) modeBtn.classList.toggle('is-on', on);
+        if (on) {
+            panel.hidden = true;
+            plusBtn.classList.remove('is-on');
+            if (ta) ta.blur();
+        } else if (ta) {
+            ta.focus();
+        }
+    }
+    if (modeBtn) {
+        modeBtn.addEventListener('click', function () {
+            setVoiceMode(!form.classList.contains('is-voice'));
+        });
+    }
+    if (plusBtn) {
+        plusBtn.addEventListener('click', function () {
+            panel.hidden = !panel.hidden;
+            plusBtn.classList.toggle('is-on', !panel.hidden);
+            if (!panel.hidden) setVoiceMode(false);
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (!panel || panel.hidden) return;
+        if (form.contains(e.target)) return;
+        panel.hidden = true;
+        if (plusBtn) plusBtn.classList.remove('is-on');
+    });
+    window.__wc = { moveBar: moveBar, form: form };
 })();
 </script>
 <?php render_footer();
