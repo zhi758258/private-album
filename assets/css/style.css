@@ -1458,6 +1458,29 @@ img.avatar { display: block; }
 
 /* ===== 私信聊天 ===== */
 /* ===== 聊天页（全屏 · 微信式） ===== */
+body.chat-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+}
+.chat-page .foot { display: none; }
+.chat-page .app-shell { height: 100dvh; }
+.chat-page .topbar { display: none; }
+.chat-page .main-col { padding-top: env(safe-area-inset-top, 0px); }
+.chat-menu {
+    flex: 0 0 auto;
+    margin-left: auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
 .chat-page .wrap {
     padding: 0;
     display: flex;

@@ -241,16 +241,18 @@ function render_footer(): void
             function openMenu() {
                 document.body.classList.add('nav-open');
                 drawer.setAttribute('aria-hidden', 'false');
-                btn.setAttribute('aria-expanded', 'true');
+                document.querySelectorAll('.menu-toggle').forEach(function (b) { b.setAttribute('aria-expanded', 'true'); });
                 mask.hidden = false;
             }
             function closeMenu() {
                 document.body.classList.remove('nav-open');
                 drawer.setAttribute('aria-hidden', 'true');
-                btn.setAttribute('aria-expanded', 'false');
+                document.querySelectorAll('.menu-toggle').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
                 mask.hidden = true;
             }
-            btn.addEventListener('click', openMenu);
+            document.querySelectorAll('.menu-toggle').forEach(function (b) {
+                b.addEventListener('click', openMenu);
+            });
             closeBtn.addEventListener('click', closeMenu);
             mask.addEventListener('click', closeMenu);
         }

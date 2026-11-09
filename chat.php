@@ -86,6 +86,9 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends', 
             <span class="friend-sub">@<?= h($other['username']) ?></span>
         </span>
     </button>
+    <button type="button" class="menu-toggle chat-menu" aria-label="打开菜单" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
 </section>
 
 <div class="chat-box" id="chatBox">
