@@ -55,6 +55,8 @@
             st.gen += 1;
             st.cancel = true;
             st.uploading = false;
+            st.armed = false;
+            overlayHide();
             if (st.recorder && st.recorder.state !== 'inactive') {
                 try { st.recorder.stop(); } catch (e) { /* ignore */ }
             }
@@ -64,7 +66,7 @@
             if (st.btn) {
                 st.btn.classList.remove('is-recording');
                 st.btn.disabled = false;
-                st.btn.title = '语音';
+                st.btn.title = '按住说话';
             }
             if (st.audio && st.audio.src) {
                 try { URL.revokeObjectURL(st.audio.src); } catch (e) { /* ignore */ }
@@ -80,6 +82,51 @@
         f.dur.value = '';
     }
 
+    var CANCEL_DIST = 70;
+
+    var overlay = null;
+    var ovTime, ovTip, ovBack;
+
+    function ensureOverlay() {
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.className = 'voice-overlay';
+        overlay.hidden = true;
+        overlay.innerHTML = '<div class="voice-overlay-panel">'
+            + '<div class="voice-overlay-back"></div>'
+            + '<div class="voice-overlay-wave"></div>'
+            + '<div class="voice-overlay-time">0:00</div>'
+            + '<div class="voice-overlay-tip">手指上滑，取消发送</div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        ovTime = overlay.querySelector('.voice-overlay-time');
+        ovTip = overlay.querySelector('.voice-overlay-tip');
+        ovBack = overlay.querySelector('.voice-overlay-back');
+        return overlay;
+    }
+
+    function overlayShow() {
+        ensureOverlay();
+        overlay.hidden = false;
+        ovTime.textContent = '0:00';
+        overlay.classList.remove('is-cancel');
+        ovTip.textContent = '手指上滑，取消发送';
+    }
+
+    function overlayTime(sec) {
+        if (ovTime) ovTime.textContent = fmt(sec);
+    }
+
+    function overlayCancel(on) {
+        if (!overlay) return;
+        overlay.classList.toggle('is-cancel', !!on);
+        ovTip.textContent = on ? '松开手指，取消发送' : '手指上滑，取消发送';
+    }
+
+    function overlayHide() {
+        if (overlay) overlay.hidden = true;
+    }
+
     function setup(form) {
         if (form.getAttribute('data-voice-bound')) return;
         form.setAttribute('data-voice-bound', '1');
@@ -93,8 +140,8 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'emoji-toggle voice-toggle';
-        btn.title = '语音';
-        btn.setAttribute('aria-label', '录制语音');
+        btn.title = '按住说话';
+        btn.setAttribute('aria-label', '按住录音');
         btn.innerHTML = MIC;
 
         var preview = document.createElement('div');
@@ -130,6 +177,8 @@
             gen: 0,
             cancel: false,
             uploading: false,
+            armed: false,
+            startY: 0,
             blobUrl: '',
             btn: btn,
             preview: preview,
@@ -148,12 +197,10 @@
 
         function setRecording(on) {
             btn.classList.toggle('is-recording', on);
-            btn.title = on ? '停止录音' : '语音';
-            btn.disabled = false;
+            btn.title = on ? '松开发送' : '按住说话';
             recRow.hidden = !on;
             audio.hidden = on;
             clear.hidden = on;
-            preview.hidden = false;
         }
 
         function stopRecording() {
@@ -166,6 +213,7 @@
         function startRecording() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !pickMime()) {
                 alert('当前浏览器不支持录音，请更换浏览器。');
+                state.armed = false;
                 return;
             }
             state.cancel = false;
@@ -173,10 +221,11 @@
             state.seconds = 0;
             recTime.textContent = '0:00';
             preview.hidden = false;
-            btn.disabled = true;
             btn.title = '正在启动…';
+            overlayShow();
 
             navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+                if (!state.armed) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} return; }
                 state.stream = stream;
                 var mime = pickMime();
                 var opts = mime ? { mimeType: mime } : {};
@@ -194,12 +243,14 @@
                 state.timer = setInterval(function () {
                     state.seconds += 1;
                     recTime.textContent = fmt(state.seconds);
+                    overlayTime(state.seconds);
                     if (state.seconds >= MAX_SECONDS) stopRecording();
                 }, 1000);
             }).catch(function () {
-                btn.disabled = false;
-                btn.title = '语音';
+                state.armed = false;
+                btn.title = '按住说话';
                 preview.hidden = true;
+                overlayHide();
                 alert('无法访问麦克风，请检查录音权限。');
             });
         }
@@ -213,18 +264,22 @@
             state.chunks = [];
             state.recorder = null;
             setRecording(false);
+            overlayHide();
 
             if (cancelling) {
                 preview.hidden = true;
-                btn.disabled = false;
+                return;
+            }
+            if (state.seconds < 1) {
+                preview.hidden = true;
+                btn.title = '按住说话';
                 return;
             }
             var mime = (chunks[0] && chunks[0].type) || pickMime() || 'audio/webm';
             var blob = new Blob(chunks, { type: mime });
             if (!blob.size) {
                 preview.hidden = true;
-                btn.disabled = false;
-                alert('没有录到声音，请重试。');
+                btn.title = '按住说话';
                 return;
             }
             var dur = Math.max(1, state.seconds);
@@ -234,7 +289,6 @@
         function upload(blob, mime, dur) {
             var gen = state.gen;
             state.uploading = true;
-            btn.disabled = true;
             btn.title = '上传中…';
             audio.hidden = true;
             clear.hidden = true;
@@ -255,8 +309,7 @@
                 .then(function (d) {
                     if (gen !== state.gen) return;
                     state.uploading = false;
-                    btn.disabled = false;
-                    btn.title = '语音';
+                    btn.title = '按住说话';
                     if (!d || !d.ok || !d.file) {
                         preview.hidden = true;
                         alert((d && d.error) || '语音上传失败，请重试。');
@@ -269,26 +322,66 @@
                     clear.hidden = false;
                     recRow.hidden = true;
                     preview.hidden = false;
+                    if (form.requestSubmit) form.requestSubmit();
+                    else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
                 })
                 .catch(function () {
                     if (gen !== state.gen) return;
                     state.uploading = false;
-                    btn.disabled = false;
-                    btn.title = '语音';
+                    btn.title = '按住说话';
                     preview.hidden = true;
                     alert('语音上传失败，请重试。');
                 });
         }
 
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
+        function pressStart(e) {
             if (state.uploading) return;
+            if (e.button !== undefined && e.button !== null && e.button !== 0 && e.pointerType !== 'touch') return;
+            if (state.recorder && state.recorder.state === 'recording') return;
+            e.preventDefault();
+            state.armed = true;
+            state.startY = e.clientY || 0;
+            startRecording();
+        }
+
+        function pressMove(e) {
+            if (!state.armed) return;
+            if (state.startY === 0) state.startY = e.clientY || 0;
+            var dy = (e.clientY || 0) - state.startY;
+            if (dy <= -CANCEL_DIST && !state.cancel) {
+                state.cancel = true;
+                overlayCancel(true);
+            } else if (dy > -CANCEL_DIST && state.cancel) {
+                state.cancel = false;
+                overlayCancel(false);
+            }
+        }
+
+        function pressEnd() {
+            if (!state.armed) return;
+            state.armed = false;
             if (state.recorder && state.recorder.state === 'recording') {
                 stopRecording();
+            } else if (!state.stream) {
+                overlayHide();
+                preview.hidden = true;
+                btn.title = '按住说话';
             } else {
-                startRecording();
+                overlayHide();
             }
+        }
+
+        btn.addEventListener('pointerdown', function (e) {
+            try { btn.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            pressStart(e);
         });
+        btn.addEventListener('pointermove', pressMove);
+        btn.addEventListener('pointerup', pressEnd);
+        btn.addEventListener('pointercancel', function () {
+            state.cancel = true;
+            pressEnd();
+        });
+        btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
         clear.addEventListener('click', function (e) {
             e.preventDefault();
