@@ -2410,8 +2410,11 @@ img.avatar { display: block; }
     justify-content: center;
     gap: 12px;
     margin-top: 14px;
+    flex-wrap: wrap;
 }
 .capture-actions .btn { width: auto; padding: 9px 22px; }
+.capture-file { display: none; }
+.capture-pick { white-space: nowrap; }
 .capture-shutter.is-recording {
     background: #e53935;
     border-color: #e53935;
@@ -2484,6 +2487,10 @@ img.avatar { display: block; }
 @media (max-width: 560px) {
     .capture-stage { aspect-ratio: 3 / 4; }
     .capture-panel { padding: 10px; }
+    .capture-tabs { flex-wrap: wrap; }
+    .capture-tab { padding: 6px 12px; }
+    .capture-actions { gap: 8px; }
+    .capture-actions .btn { padding: 9px 16px; }
 }
 
 /* 视频通话 */

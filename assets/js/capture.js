@@ -13,7 +13,7 @@
     var CAM = '<svg viewBox="0 0 24 24" class="cam-icon" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
 
     var modal = null;
-    var live, shot, review, timerBox, timerText, shutter, retake, useBtn, hint, tabs;
+    var live, shot, review, timerBox, timerText, shutter, retake, useBtn, hint, tabs, pickBtn;
     var activeForm = null;
     var mode = 'photo';
     var stream = null;
@@ -25,6 +25,8 @@
     var blobUrl = '';
     var blobKind = '';
     var blobDur = 0;
+    var blobName = '';
+    var pickInput = null;
     var uploading = false;
     var discard = false;
 
@@ -63,6 +65,7 @@
             + '    <div class="capture-tabs">'
             + '      <button type="button" class="capture-tab is-on" data-mode="photo">拍照</button>'
             + '      <button type="button" class="capture-tab" data-mode="video">录像</button>'
+            + '      <button type="button" class="capture-tab" data-mode="album">相册</button>'
             + '    </div>'
             + '    <button type="button" class="capture-close" aria-label="关闭">×</button>'
             + '  </div>'
@@ -74,9 +77,11 @@
             + '  </div>'
             + '  <div class="capture-actions">'
             + '    <button type="button" class="btn capture-shutter">拍照</button>'
+            + '    <button type="button" class="btn capture-pick" hidden>从相册选择</button>'
             + '    <button type="button" class="btn ghost-btn capture-retake" hidden>重拍</button>'
             + '    <button type="button" class="btn capture-use" hidden>发送</button>'
             + '  </div>'
+            + '  <input type="file" class="capture-file" accept="image/*,video/*" hidden>'
             + '  <p class="capture-hint"></p>'
             + '</div>';
         document.body.appendChild(modal);
@@ -91,6 +96,8 @@
         useBtn = modal.querySelector('.capture-use');
         hint = modal.querySelector('.capture-hint');
         tabs = modal.querySelectorAll('.capture-tab');
+        pickBtn = modal.querySelector('.capture-pick');
+        pickInput = modal.querySelector('.capture-file');
 
         modal.querySelector('.capture-close').addEventListener('click', close);
         modal.addEventListener('click', function (e) {
@@ -101,6 +108,16 @@
                 if (recorder && recorder.state === 'recording') return;
                 mode = t.getAttribute('data-mode');
                 tabs.forEach(function (x) { x.classList.toggle('is-on', x === t); });
+                if (mode === 'album') {
+                    resetLive();
+                    stopStream();
+                    live.hidden = true;
+                    shutter.hidden = true;
+                    pickBtn.hidden = false;
+                    setHint('从相册或电脑里选择照片、视频。');
+                    openPicker();
+                    return;
+                }
                 resetLive();
                 requestStream();
             });
@@ -115,7 +132,19 @@
                 startVideo();
             }
         });
+        pickBtn.addEventListener('click', openPicker);
+        pickInput.addEventListener('change', onPickedFile);
         retake.addEventListener('click', function () {
+            if (mode === 'album') {
+                resetLive();
+                stopStream();
+                live.hidden = true;
+                shutter.hidden = true;
+                if (pickBtn) pickBtn.hidden = false;
+                setHint('从相册或电脑里选择照片、视频。');
+                openPicker();
+                return;
+            }
             resetLive();
             if (!stream) requestStream();
         });
@@ -205,6 +234,7 @@
         blob = null;
         blobKind = '';
         blobDur = 0;
+        blobName = '';
         revokeBlob();
         shot.hidden = true;
         shot.removeAttribute('src');
@@ -216,6 +246,7 @@
         shutter.hidden = false;
         retake.hidden = true;
         useBtn.hidden = true;
+        if (pickBtn) pickBtn.hidden = true;
         shutter.disabled = !stream;
         updateShutter();
         setHint('');
@@ -333,6 +364,55 @@
         setHint('');
     }
 
+    function openPicker() {
+        if (!pickInput) return;
+        pickInput.value = '';
+        try { pickInput.click(); } catch (e) { /* ignore */ }
+    }
+
+    function onPickedFile() {
+        var f = pickInput && pickInput.files && pickInput.files[0];
+        if (!f) return;
+        var type = String(f.type || '').toLowerCase();
+        var isImage = type.indexOf('image/') === 0;
+        var isVideo = type.indexOf('video/') === 0;
+        if (!isImage && !isVideo) {
+            var lower = String(f.name || '').toLowerCase();
+            if (/\.(jpg|jpeg|png|gif|webp)$/.test(lower)) isImage = true;
+            else if (/\.(mp4|webm|mov|m4v)$/.test(lower)) isVideo = true;
+        }
+        if (!isImage && !isVideo) {
+            setHint('只能选择照片或 mp4 / webm / mov 视频。', true);
+            return;
+        }
+        if (f.size > MAX_BYTES) {
+            setHint('文件超过 25MB，请选择更小的文件。', true);
+            return;
+        }
+        blob = f;
+        blobKind = isImage ? 'image' : 'video';
+        blobName = f.name || (isImage ? 'photo.jpg' : 'video.webm');
+        blobDur = 0;
+        revokeBlob();
+        blobUrl = URL.createObjectURL(f);
+        if (isImage) {
+            shot.src = blobUrl;
+            shot.hidden = false;
+            live.hidden = true;
+            review.hidden = true;
+        } else {
+            review.src = blobUrl;
+            review.hidden = false;
+            live.hidden = true;
+            shot.hidden = true;
+        }
+        shutter.hidden = true;
+        if (pickBtn) pickBtn.hidden = true;
+        retake.hidden = false;
+        useBtn.hidden = false;
+        setHint('');
+    }
+
     function useMedia() {
         var form = activeForm;
         if (!blob || !form || uploading) return;
@@ -350,8 +430,15 @@
         setHint('正在上传…');
 
         var ext = blobKind === 'image' ? 'jpg' : videoExt(blob.type);
+        var uploadName;
+        if (blobName && blobName.indexOf('.') !== -1) {
+            var picked = blobName.replace(/[^A-Za-z0-9._-]/g, '');
+            uploadName = picked || (blobKind === 'image' ? 'photo.jpg' : ('video.' + ext));
+        } else {
+            uploadName = blobKind === 'image' ? 'photo.jpg' : ('video.' + ext);
+        }
         var fd = new FormData();
-        fd.append('media', blob, blobKind === 'image' ? 'photo.jpg' : ('video.' + ext));
+        fd.append('media', blob, uploadName);
         fd.append('csrf', form.querySelector('input[name="csrf"]').value);
 
         fetch('/media_upload.php', {
