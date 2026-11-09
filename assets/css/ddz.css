@@ -352,9 +352,9 @@
     flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-end;
-    padding: 26px 4px 2px;
+    padding: 32px 4px 2px;
     overflow: visible;
-    min-height: 86px;
+    min-height: 104px;
 }
 
 /* 牌：角标点数 + 右下花色，贴近腾讯斗地主 */
@@ -364,17 +364,17 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
-    width: 54px;
-    height: 76px;
-    padding: 3px 0 0 5px;
+    width: 62px;
+    height: 88px;
+    padding: 4px 0 0 6px;
     background: linear-gradient(180deg, #fffef8 0%, #f3f5fa 100%);
     color: #1c1f24;
     border: 1.5px solid #c5cad3;
-    border-radius: 7px;
+    border-radius: 8px;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.28);
     font-weight: 800;
     user-select: none;
-    touch-action: manipulation;
+    touch-action: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 .dcard.is-red { color: #e0322b; }
@@ -385,13 +385,13 @@
     line-height: 1;
     z-index: 1;
 }
-.dcard-rank { font-size: 16px; line-height: 1; font-family: "DIN Alternate", "Arial Narrow", "Songti SC", sans-serif; }
-.dcard-suit { font-size: 13px; line-height: 1.1; }
+.dcard-rank { font-size: 20px; line-height: 1; font-family: "DIN Alternate", "Arial Narrow", "Songti SC", sans-serif; }
+.dcard-suit { font-size: 16px; line-height: 1.1; }
 .dcard-face {
     position: absolute;
-    right: 5px;
-    bottom: 4px;
-    font-size: 22px;
+    right: 6px;
+    bottom: 5px;
+    font-size: 28px;
     line-height: 1;
     pointer-events: none;
 }
@@ -401,20 +401,20 @@
     padding: 0;
 }
 .dcard-joker .dcard-rank {
-    font-size: 13px;
+    font-size: 15px;
     writing-mode: vertical-rl;
     letter-spacing: 2px;
 }
 .dcard-joker .dcard-face { display: none; }
 .dcard-joker.is-big { color: #e0322b; }
-.dcard-mini { width: 32px; height: 46px; border-radius: 5px; padding: 2px 0 0 3px; }
-.dcard-mini .dcard-rank { font-size: 12px; }
-.dcard-mini .dcard-suit { font-size: 10px; }
-.dcard-mini .dcard-face { font-size: 13px; right: 3px; bottom: 2px; }
-.dcard-mini.dcard-joker .dcard-rank { font-size: 9px; letter-spacing: 1px; }
+.dcard-mini { width: 38px; height: 54px; border-radius: 6px; padding: 3px 0 0 4px; }
+.dcard-mini .dcard-rank { font-size: 14px; }
+.dcard-mini .dcard-suit { font-size: 11px; }
+.dcard-mini .dcard-face { font-size: 17px; right: 4px; bottom: 3px; }
+.dcard-mini.dcard-joker .dcard-rank { font-size: 10px; letter-spacing: 1px; }
 .dcard-backface {
-    width: 34px;
-    height: 48px;
+    width: 40px;
+    height: 56px;
     border-radius: 6px;
     border: 1.5px solid #c9a227;
     background:
@@ -426,8 +426,8 @@
 
 .ddz-myhand .dcard { margin-left: var(--ddz-overlap, -22px); cursor: pointer; flex-shrink: 0; }
 .ddz-myhand .dcard:first-child { margin-left: 0; }
-.ddz-myhand .dcard:hover { transform: translateY(-8px); z-index: 2; }
-.ddz-myhand .dcard.is-selected { transform: translateY(-22px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35); border-color: #ffd34d; z-index: 3; }
+.ddz-myhand .dcard:hover { transform: translateY(-10px); z-index: 2; }
+.ddz-myhand .dcard.is-selected { transform: translateY(-26px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35); border-color: #ffd34d; z-index: 3; }
 
 .ddz-over-mask {
     position: fixed;
@@ -476,10 +476,10 @@
     .ddz-play-left { left: 8%; top: 34%; max-width: 46%; }
     .ddz-play-right { right: 8%; top: 34%; max-width: 46%; }
     .ddz-play-me { bottom: 12%; }
-    .dcard { width: 42px; height: 62px; }
-    .dcard-rank { font-size: 14px; }
-    .dcard-suit { font-size: 11px; }
-    .dcard-face { font-size: 16px; }
+    .dcard { width: 50px; height: 72px; }
+    .dcard-rank { font-size: 17px; }
+    .dcard-suit { font-size: 13px; }
+    .dcard-face { font-size: 21px; }
     .ddz-player-card { min-width: 78px; padding: 6px 7px; }
     .ddz-avatar { width: 48px; height: 48px; }
 }
@@ -609,23 +609,23 @@ html.ddz-ls .ddz-dock {
 }
 html.ddz-ls .ddz-actions { min-height: 40px; margin-bottom: 4px; gap: 10px; }
 html.ddz-ls .ddz-actions .ddz-btn {
-    padding: 8px 22px;
-    font-size: 14px;
-    min-height: 36px;
-    min-width: 72px;
+    padding: 10px 26px;
+    font-size: 15px;
+    min-height: 44px;
+    min-width: 84px;
     width: auto;
 }
 html.ddz-ls .ddz-myhand {
-    padding-top: 22px;
-    min-height: 78px;
+    padding-top: 30px;
+    min-height: 96px;
     justify-content: flex-start;
     overflow: visible;
 }
-html.ddz-ls .dcard { width: 46px; height: 66px; }
-html.ddz-ls .dcard-rank { font-size: 15px; }
-html.ddz-ls .dcard-suit { font-size: 12px; }
-html.ddz-ls .dcard-face { font-size: 18px; }
-html.ddz-ls .dcard-mini { width: 28px; height: 40px; }
+html.ddz-ls .dcard { width: 60px; height: 84px; }
+html.ddz-ls .dcard-rank { font-size: 19px; }
+html.ddz-ls .dcard-suit { font-size: 15px; }
+html.ddz-ls .dcard-face { font-size: 26px; }
+html.ddz-ls .dcard-mini { width: 34px; height: 48px; }
 html.ddz-ls .ddz-avatar { width: 44px; height: 44px; }
 html.ddz-ls .ddz-seat-me .ddz-avatar { width: 40px; height: 40px; }
 html.ddz-ls .ddz-btn,

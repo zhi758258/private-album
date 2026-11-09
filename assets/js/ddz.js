@@ -283,6 +283,9 @@
 
     function renderHand(d) {
         var ids = (d.myHand || []).slice().sort(function (a, b) { return b - a; });
+        var key = ids.join(' ');
+        if (ui.myHand.__handKey === key) { return; }
+        ui.myHand.__handKey = key;
         ui.myHand.innerHTML = ids.map(function (id) { return dcard(id, state.selected[id] ? 'is-selected' : ''); }).join('');
         requestAnimationFrame(fitHand);
     }
@@ -440,7 +443,12 @@
             if (!r.ok) { flash(r.error || '提示失败', false); return; }
             var hints = r.hints || [];
             if (!hints.length) {
-                flash(r.pass ? '没有能大过的牌' : '没有可出的牌', false);
+                if (r.pass) {
+                    flash('要不起，已自动不出', false);
+                    pass();
+                } else {
+                    flash('没有可出的牌', false);
+                }
                 return;
             }
             var idx = state.hintIdx % hints.length;
@@ -460,13 +468,58 @@
         });
     }
 
-    ui.myHand.addEventListener('click', function (e) {
+    function refreshPlayBtn() {
+        var playBtn = ui.myActions.querySelector('.ddz-btn-green');
+        if (playBtn) { playBtn.disabled = Object.keys(state.selected).length === 0; }
+    }
+    function toggleCard(card, force) {
+        var id = card.getAttribute('data-id');
+        var on = (force === undefined) ? !state.selected[id] : !!force;
+        if (on) { state.selected[id] = true; } else { delete state.selected[id]; }
+        card.classList.toggle('is-selected', on);
+    }
+
+    var dragging = false;
+    var dragSelect = null;
+    var dragSeen = {};
+
+    function cardFromPoint(x, y) {
+        var el = document.elementFromPoint(x, y);
+        return el && el.closest ? el.closest('.dcard') : null;
+    }
+    ui.myHand.addEventListener('pointerdown', function (e) {
+        if (e.button !== undefined && e.button !== null && e.button !== 0 && e.pointerType !== 'touch') { return; }
         var card = e.target.closest ? e.target.closest('.dcard') : null;
         if (!card) { return; }
+        e.preventDefault();
+        dragging = true;
+        dragSeen = {};
         var id = card.getAttribute('data-id');
-        if (state.selected[id]) { delete state.selected[id]; } else { state.selected[id] = true; }
-        card.classList.toggle('is-selected');
+        dragSelect = !state.selected[id];
+        dragSeen[id] = true;
+        toggleCard(card, dragSelect);
+        refreshPlayBtn();
+        try { ui.myHand.setPointerCapture(e.pointerId); } catch (err) {}
     });
+    ui.myHand.addEventListener('pointermove', function (e) {
+        if (!dragging) { return; }
+        var card = cardFromPoint(e.clientX, e.clientY);
+        if (!card || !ui.myHand.contains(card)) { return; }
+        var id = card.getAttribute('data-id');
+        if (dragSeen[id]) { return; }
+        dragSeen[id] = true;
+        toggleCard(card, dragSelect);
+        refreshPlayBtn();
+    });
+    function endDrag() {
+        if (!dragging) { return; }
+        dragging = false;
+        dragSelect = null;
+        dragSeen = {};
+    }
+    ui.myHand.addEventListener('pointerup', endDrag);
+    ui.myHand.addEventListener('pointercancel', endDrag);
+    window.addEventListener('pointerup', endDrag);
 
     document.getElementById('btnQuick').addEventListener('click', function () {
         post('quick_start').then(function (r) { if (r.ok) { enterRoom(r.code); } else { flash(r.error || '创建失败', false); } });
