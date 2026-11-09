@@ -405,6 +405,40 @@
         pollTimer = setTimeout(poll, delay || 3500);
     }
 
+    var CALL_ICON = '<svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M4 5.5C4 4.7 4.7 4 5.5 4h2.2c.7 0 1.3.5 1.5 1.2l.7 2.6c.1.6-.1 1.2-.6 1.5l-1.1.8a11 11 0 0 0 5.2 5.2l.8-1.1c.4-.5 1-.7 1.5-.6l2.6.7c.7.2 1.2.8 1.2 1.5v2.2c0 .8-.7 1.5-1.5 1.5A14.5 14.5 0 0 1 4 5.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+
+    function bindCallBar(form) {
+        if (!form || form.getAttribute('data-call-bound')) return;
+        form.setAttribute('data-call-bound', '1');
+        var peerId = parseInt(form.getAttribute('data-call-user'), 10) || 0;
+        var peerName = form.getAttribute('data-call-name') || '好友';
+        if (peerId <= 0 || peerId === me) return;
+        var ta = form.querySelector('textarea');
+        var composer = ta && ta.closest ? ta.closest('.emoji-composer') : null;
+        var anchor = composer || ta || form;
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'emoji-toggle call-toggle';
+        btn.title = '视频通话';
+        btn.setAttribute('aria-label', '视频通话');
+        btn.innerHTML = CALL_ICON;
+
+        var bar = composer ? composer.querySelector('.emoji-bar') : null;
+        if (bar) {
+            bar.appendChild(btn);
+        } else {
+            var callBar = document.createElement('div');
+            callBar.className = 'emoji-bar call-bar';
+            callBar.appendChild(btn);
+            anchor.parentNode.insertBefore(callBar, anchor.nextSibling);
+        }
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            startCall(peerId, peerName);
+        });
+    }
+
     document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('.call-start-btn') : null;
         if (!btn) return;
@@ -414,6 +448,10 @@
             btn.getAttribute('data-call-name') || '好友'
         );
     });
+
+    function initCallBars() {
+        document.querySelectorAll('form[data-call]').forEach(bindCallBar);
+    }
 
     document.addEventListener('visibilitychange', function () {
         if (!document.hidden) poll();
@@ -432,6 +470,12 @@
         start: startCall,
         hangup: hangup
     };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCallBars);
+    } else {
+        initCallBars();
+    }
 
     ensureUI();
     schedulePoll(1200);

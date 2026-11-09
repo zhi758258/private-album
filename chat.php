@@ -86,7 +86,6 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
             <div class="friend-sub">@<?= h($other['username']) ?></div>
         </div>
     </div>
-    <button type="button" class="btn call-start-btn" data-call-user="<?= $otherId ?>" data-call-name="<?= h($other['display_name']) ?>">视频通话</button>
 </section>
 
 <div class="chat-box" id="chatBox">
@@ -110,7 +109,7 @@ render_header('与 ' . $other['display_name'] . ' 的对话', $user, 'friends');
     <?php endif; ?>
 </div>
 
-<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location data-voice data-capture>
+<form class="panel chat-form" id="chatForm" method="post" action="/chat.php?u=<?= $otherId ?>" data-location data-voice data-capture data-call data-call-user="<?= $otherId ?>" data-call-name="<?= h($other['display_name']) ?>">
     <?= csrf_field() ?>
     <textarea id="content" name="content" maxlength="2000" placeholder="输入消息，回车发送，可点表情或打字搜表情" aria-label="消息内容" data-emoji></textarea>
     <button type="submit">发送</button>

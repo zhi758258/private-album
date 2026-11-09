@@ -1460,6 +1460,74 @@ img.avatar { display: block; }
     .friend-item { flex-wrap: wrap; }
 }
 
+/* ===== 手机端聊天优化 ===== */
+@media (max-width: 700px) {
+    .chat-head {
+        gap: 10px;
+        flex-wrap: nowrap;
+    }
+    .chat-head > .btn {
+        width: auto;
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    .chat-peer { min-width: 0; flex: 1 1 auto; }
+    .chat-peer .friend-name,
+    .chat-peer .friend-sub {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .chat-peer .avatar { width: 40px; height: 40px; }
+    .chat-box {
+        height: 58vh;
+        min-height: 0;
+        padding: 12px 10px;
+        word-break: break-word;
+    }
+    .chat-bubble {
+        max-width: 84%;
+        padding: 9px 12px;
+    }
+    .chat-line { gap: 8px; }
+    .chat-line .avatar { width: 30px; height: 30px; }
+    .chat-text { font-size: 15px; }
+    .chat-form {
+        padding: 12px;
+        position: sticky;
+        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    .chat-form textarea {
+        min-height: 56px;
+        font-size: 16px;
+    }
+    .chat-form .emoji-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* 好友列表 */
+    .friend-item {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 14px 0;
+    }
+    .friend-info { flex: 1 1 auto; }
+    .friend-actions {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+    .friend-actions .btn,
+    .friend-actions .btn.ghost-btn {
+        width: auto;
+        padding: 8px 14px;
+        font-size: 14px;
+    }
+    .friend-actions form { flex: 0 0 auto; }
+}
+
 /* ===== 可点击头像 ===== */
 .avatar-btn {
     flex-shrink: 0;
@@ -2419,7 +2487,9 @@ img.avatar { display: block; }
 }
 
 /* 视频通话 */
-.chat-head .call-start-btn { margin-left: auto; width: auto; }
+.call-toggle { color: var(--theme-primary); }
+.call-toggle:hover { background: color-mix(in srgb, var(--theme-primary) 14%, transparent); }
+.call-bar { margin-bottom: 4px; }
 .call-layer {
     position: fixed;
     inset: 0;
