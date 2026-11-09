@@ -16,7 +16,7 @@
     };
     Object.keys(uiMap).forEach(function (k) { ui[k] = document.getElementById(uiMap[k]); });
 
-    var state = { code: cfg.code || '', seat: -1, isOwner: false, data: null, selected: {}, timer: null, busy: false, hintIdx: 0, lastFlyKey: '', playHtml: {} };
+    var state = { code: cfg.code || '', seat: -1, isOwner: false, data: null, selected: {}, timer: null, busy: false, hintIdx: 0, lastFlyKey: '', playHtml: {}, snd: null };
 
     var RANK_TXT = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '2' };
     var SUITS = ['♠', '♥', '♣', '♦'];
@@ -81,6 +81,72 @@
         }
         return null;
     }
+    var sound = (function () {
+        var ctx = null;
+        var on = true;
+        try { on = localStorage.getItem('ddz_sound') !== '0'; } catch (e) { on = true; }
+        function ac() {
+            if (!ctx) {
+                var Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) { return null; }
+                try { ctx = new Ctx(); } catch (e) { return null; }
+            }
+            if (ctx.state === 'suspended') { ctx.resume().catch(function () {}); }
+            return ctx;
+        }
+        function tone(t, freq, dur, peak, type, slideTo) {
+            var o = ctx.createOscillator();
+            var g = ctx.createGain();
+            o.type = type || 'sine';
+            o.frequency.setValueAtTime(freq, t);
+            if (slideTo) { o.frequency.exponentialRampToValueAtTime(slideTo, t + dur); }
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+            g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.5), t + 0.012 + dur * 0.5);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(t); o.stop(t + dur + 0.1);
+        }
+        function noise(t, dur, peak, filterFreq) {
+            var len = Math.floor(ctx.sampleRate * dur);
+            var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+            var data = buf.getChannelData(0);
+            for (var i = 0; i < len; i++) { data[i] = (Math.random() * 2 - 1) * (1 - i / len); }
+            var src = ctx.createBufferSource();
+            src.buffer = buf;
+            var flt = ctx.createBiquadFilter();
+            flt.type = 'lowpass';
+            flt.frequency.value = filterFreq || 1200;
+            var g = ctx.createGain();
+            g.gain.value = peak;
+            src.connect(flt); flt.connect(g); g.connect(ctx.destination);
+            src.start(t);
+        }
+        function now() { return ctx.currentTime; }
+        var API = {
+            enabled: function () { return on; },
+            set: function (v) { on = !!v; try { localStorage.setItem('ddz_sound', on ? '1' : '0'); } catch (e) {} },
+            resume: function () { ac(); },
+            card: function () { if (!ac() || !on) return; var t = now(); tone(t, 620, 0.09, 0.16, 'triangle'); tone(t + 0.02, 880, 0.07, 0.1, 'sine'); },
+            pass: function () { if (!ac() || !on) return; tone(now(), 300, 0.3, 0.16, 'sine', 180); },
+            bid: function () { if (!ac() || !on) return; var t = now(); tone(t, 523, 0.14, 0.18, 'square'); tone(t + 0.12, 784, 0.22, 0.2, 'square'); },
+            nobid: function () { if (!ac() || !on) return; tone(now(), 392, 0.2, 0.14, 'sine', 300); },
+            deal: function () { if (!ac() || !on) return; var t = now(); for (var i = 0; i < 6; i++) { tone(t + i * 0.05, 700 + (i % 2) * 160, 0.05, 0.09, 'triangle'); } },
+            bomb: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.4, 0.5, 900); tone(t, 140, 0.4, 0.3, 'sawtooth', 60); },
+            rocket: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.55, 0.6, 1400); tone(t, 220, 0.5, 0.34, 'sawtooth', 70); tone(t + 0.05, 440, 0.4, 0.2, 'square', 120); },
+            turn: function () { if (!ac() || !on) return; var t = now(); tone(t, 880, 0.16, 0.16, 'sine'); tone(t + 0.14, 1175, 0.22, 0.16, 'sine'); },
+            win: function () { if (!ac() || !on) return; var t = now(); [523, 659, 784, 1047].forEach(function (f, i) { tone(t + i * 0.14, f, 0.28, 0.2, 'triangle'); }); },
+            lose: function () { if (!ac() || !on) return; var t = now(); [494, 440, 392, 330].forEach(function (f, i) { tone(t + i * 0.16, f, 0.3, 0.18, 'sine'); }); },
+            start: function () { if (!ac() || !on) return; var t = now(); tone(t, 659, 0.16, 0.18, 'square'); tone(t + 0.15, 880, 0.16, 0.18, 'square'); tone(t + 0.30, 1175, 0.3, 0.2, 'square'); },
+            byType: function (type) {
+                if (type === 'bomb') { API.bomb(); }
+                else if (type === 'rocket') { API.rocket(); }
+                else { API.card(); }
+            }
+        };
+        return API;
+    })();
+
     function flash(msg, ok) {
         if (!ui.flash) { return; }
         ui.flash.hidden = false;
@@ -178,13 +244,13 @@
         stopPoll();
         unlockLand();
         state.code = ''; state.seat = -1; state.data = null; state.selected = {};
-        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {};
+        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {}; state.snd = null;
         ui.table.hidden = true; ui.lobby.hidden = false; ui.over.hidden = true;
         loadScore(); loadRooms();
     }
     function enterRoom(code) {
         state.code = code; ui.lobby.hidden = true; ui.table.hidden = false; ui.over.hidden = true;
-        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {};
+        state.hintIdx = 0; state.lastFlyKey = ''; state.playHtml = {}; state.snd = null;
         lockLand();
         poll(true);
     }
@@ -377,7 +443,59 @@
         ui.overBody.innerHTML = '<p>地主：' + esc((d.players[landlord] || {}).name || '') + ' · 倍数 ×' + d.mult + (d.spring ? ' · 春天' : '') + '</p>' + rows;
     }
 
+    function soundsFor(d) {
+        var s = state.snd || (state.snd = { playKey: '', passed: {}, bidKey: '', turnKey: '', phase: '', over: false, started: false });
+        // 开局/发牌
+        if (!s.started && d.phase !== 'waiting') {
+            s.started = true;
+            sound.start();
+        }
+        if (d.phase === 'waiting') { s.started = false; }
+        // 出牌 / 不要
+        var pk = d.lastPlay && d.lastPlay.cards ? (d.lastPlay.seat + ':' + d.lastPlay.cards.join(',')) : '';
+        if (pk && pk !== s.playKey) {
+            s.playKey = pk;
+            sound.byType(d.lastPlay.type);
+        } else if (!pk) {
+            s.playKey = '';
+        }
+        var passed = d.passed || {};
+        Object.keys(passed).forEach(function (seat) {
+            if (passed[seat] && !s.passed[seat]) { sound.pass(); }
+        });
+        s.passed = {};
+        Object.keys(passed).forEach(function (seat) { if (passed[seat]) { s.passed[seat] = true; } });
+        // 抢地主
+        var bids = [];
+        (d.events || []).forEach(function (e) { if (e.t === 'bid') { bids.push(e.seat + ':' + (e.rob ? 1 : 0)); } });
+        var bidKey = bids.join('|');
+        if (bidKey !== s.bidKey) {
+            var added = bids.length > (s.bidKey ? s.bidKey.split('|').length : 0);
+            s.bidKey = bidKey;
+            if (added && bids.length) {
+                var lastBid = bids[bids.length - 1];
+                if (lastBid.indexOf(':1') !== -1) { sound.bid(); } else { sound.nobid(); }
+            }
+        }
+        // 轮到我
+        var turnKey = d.phase + ':' + (d.phase === 'bid' ? d.bidTurn : d.turn);
+        if (turnKey !== s.turnKey) {
+            s.turnKey = turnKey;
+            var myTurn = (d.phase === 'bid' && d.bidTurn === d.mySeat) || (d.phase === 'play' && d.turn === d.mySeat);
+            if (myTurn) { sound.turn(); }
+        }
+        // 结束
+        if (d.phase === 'over' && !s.over) {
+            s.over = true;
+            var landlord = d.landlord;
+            var myWin = (d.winner === landlord) === (landlord === d.mySeat);
+            setTimeout(function () { if (myWin) { sound.win(); } else { sound.lose(); } }, 250);
+        }
+        if (d.phase !== 'over') { s.over = false; }
+    }
+
     function render(d) {
+        soundsFor(d);
         ui.lobby.hidden = true; ui.table.hidden = false;
         ui.roomCode.textContent = '房间 ' + state.code;
         ui.mult.textContent = '倍数 ×' + d.mult;
@@ -549,6 +667,27 @@
         });
     });
     document.getElementById('btnBackLobby').addEventListener('click', leaveRoom);
+
+    var sndBtn = document.getElementById('btnSound');
+    function syncSoundBtn() {
+        if (!sndBtn) { return; }
+        var on = sound.enabled();
+        sndBtn.textContent = on ? '🔊 音效' : '🔇 静音';
+        sndBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        sndBtn.classList.toggle('is-muted', !on);
+    }
+    syncSoundBtn();
+    if (sndBtn) {
+        sndBtn.addEventListener('click', function () {
+            sound.set(!sound.enabled());
+            syncSoundBtn();
+            if (sound.enabled()) { sound.turn(); }
+        });
+    }
+    document.addEventListener('pointerdown', function once() {
+        sound.resume();
+        document.removeEventListener('pointerdown', once);
+    }, { once: true });
 
     window.addEventListener('resize', function () { syncRotateTip(); fitHand(); });
     window.addEventListener('orientationchange', function () { setTimeout(function () { syncRotateTip(); fitHand(); }, 80); });

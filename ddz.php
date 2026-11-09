@@ -40,6 +40,7 @@ render_header(nav_label('ddz'), $user, 'ddz');
             <span class="ddz-chip" id="ddzRoomCode"></span>
             <span class="ddz-chip" id="ddzMult"></span>
             <span class="ddz-chip" id="ddzPhaseTip"></span>
+            <button type="button" class="ddz-mini ddz-sound" id="btnSound" aria-pressed="true" title="音效开关">🔊 音效</button>
             <button type="button" class="ddz-mini ddz-leave" id="btnLeave">退出房间</button>
         </div>
         <div class="ddz-arena">
