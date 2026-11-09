@@ -1224,6 +1224,23 @@ function render_footer(): void
                 }
             }
         });
+        function expandFromHash() {
+            if (!location.hash || location.hash.indexOf('#msg-') !== 0) return;
+            var el = document.getElementById(location.hash.slice(1));
+            if (!el) return;
+            var replies = el.querySelector('[data-replies]');
+            var toggle = el.querySelector('[data-thread-toggle]');
+            if (replies && replies.hidden) {
+                replies.hidden = false;
+                if (toggle) {
+                    toggle.classList.add('is-open');
+                    var n = replies.querySelectorAll('.msg.reply').length;
+                    toggle.childNodes[0].nodeValue = '收起 ' + n + ' 条回复';
+                }
+            }
+        }
+        expandFromHash();
+        window.addEventListener('hashchange', expandFromHash);
     })();
     </script>
 </body>
