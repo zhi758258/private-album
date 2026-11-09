@@ -123,25 +123,56 @@
             src.start(t);
         }
         function now() { return ctx.currentTime; }
+
+        /* 语音：用浏览器语音合成念出经典台词（无需版权音频素材） */
+        var synth = window.speechSynthesis || null;
+        var zhVoice = null;
+        function pickVoice() {
+            if (!synth || !synth.getVoices) { return; }
+            var vs = synth.getVoices() || [];
+            for (var i = 0; i < vs.length; i++) {
+                if (/zh|Chinese|中文/i.test(vs[i].lang || '') || /zh|Chinese/i.test(vs[i].name || '')) { zhVoice = vs[i]; return; }
+            }
+        }
+        if (synth) {
+            pickVoice();
+            if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = pickVoice; }
+        }
+        function say(text) {
+            if (!on || !synth || !text) { return; }
+            try {
+                synth.cancel();
+                var u = new SpeechSynthesisUtterance(text);
+                if (zhVoice) { u.voice = zhVoice; }
+                u.lang = 'zh-CN';
+                u.rate = 1.15;
+                u.pitch = 1.1;
+                u.volume = 0.95;
+                synth.speak(u);
+            } catch (e) { /* ignore */ }
+        }
+
         var API = {
             enabled: function () { return on; },
-            set: function (v) { on = !!v; try { localStorage.setItem('ddz_sound', on ? '1' : '0'); } catch (e) {} },
-            resume: function () { ac(); },
+            set: function (v) { on = !!v; try { localStorage.setItem('ddz_sound', on ? '1' : '0'); } catch (e) {} if (!on && synth) { try { synth.cancel(); } catch (e) {} } },
+            resume: function () { ac(); if (synth) { pickVoice(); } },
+            say: say,
             card: function () { if (!ac() || !on) return; var t = now(); tone(t, 620, 0.09, 0.16, 'triangle'); tone(t + 0.02, 880, 0.07, 0.1, 'sine'); },
-            pass: function () { if (!ac() || !on) return; tone(now(), 300, 0.3, 0.16, 'sine', 180); },
-            bid: function () { if (!ac() || !on) return; var t = now(); tone(t, 523, 0.14, 0.18, 'square'); tone(t + 0.12, 784, 0.22, 0.2, 'square'); },
-            nobid: function () { if (!ac() || !on) return; tone(now(), 392, 0.2, 0.14, 'sine', 300); },
+            pass: function () { if (!ac() || !on) return; tone(now(), 300, 0.3, 0.16, 'sine', 180); say('不出'); },
+            cantbeat: function () { if (!ac() || !on) return; tone(now(), 320, 0.3, 0.16, 'sine', 190); say('要不起'); },
+            bid: function () { if (!ac() || !on) return; var t = now(); tone(t, 523, 0.14, 0.18, 'square'); tone(t + 0.12, 784, 0.22, 0.2, 'square'); say('抢地主'); },
+            nobid: function () { if (!ac() || !on) return; tone(now(), 392, 0.2, 0.14, 'sine', 300); say('不抢'); },
             deal: function () { if (!ac() || !on) return; var t = now(); for (var i = 0; i < 6; i++) { tone(t + i * 0.05, 700 + (i % 2) * 160, 0.05, 0.09, 'triangle'); } },
-            bomb: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.4, 0.5, 900); tone(t, 140, 0.4, 0.3, 'sawtooth', 60); },
-            rocket: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.55, 0.6, 1400); tone(t, 220, 0.5, 0.34, 'sawtooth', 70); tone(t + 0.05, 440, 0.4, 0.2, 'square', 120); },
+            bomb: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.4, 0.5, 900); tone(t, 140, 0.4, 0.3, 'sawtooth', 60); say('炸弹'); },
+            rocket: function () { if (!ac() || !on) return; var t = now(); noise(t, 0.55, 0.6, 1400); tone(t, 220, 0.5, 0.34, 'sawtooth', 70); tone(t + 0.05, 440, 0.4, 0.2, 'square', 120); say('王炸'); },
             turn: function () { if (!ac() || !on) return; var t = now(); tone(t, 880, 0.16, 0.16, 'sine'); tone(t + 0.14, 1175, 0.22, 0.16, 'sine'); },
-            win: function () { if (!ac() || !on) return; var t = now(); [523, 659, 784, 1047].forEach(function (f, i) { tone(t + i * 0.14, f, 0.28, 0.2, 'triangle'); }); },
-            lose: function () { if (!ac() || !on) return; var t = now(); [494, 440, 392, 330].forEach(function (f, i) { tone(t + i * 0.16, f, 0.3, 0.18, 'sine'); }); },
-            start: function () { if (!ac() || !on) return; var t = now(); tone(t, 659, 0.16, 0.18, 'square'); tone(t + 0.15, 880, 0.16, 0.18, 'square'); tone(t + 0.30, 1175, 0.3, 0.2, 'square'); },
-            byType: function (type) {
+            win: function () { if (!ac() || !on) return; var t = now(); [523, 659, 784, 1047].forEach(function (f, i) { tone(t + i * 0.14, f, 0.28, 0.2, 'triangle'); }); say('赢了'); },
+            lose: function () { if (!ac() || !on) return; var t = now(); [494, 440, 392, 330].forEach(function (f, i) { tone(t + i * 0.16, f, 0.3, 0.18, 'sine'); }); say('输了'); },
+            start: function () { if (!ac() || !on) return; var t = now(); tone(t, 659, 0.16, 0.18, 'square'); tone(t + 0.15, 880, 0.16, 0.18, 'square'); tone(t + 0.30, 1175, 0.3, 0.2, 'square'); say('开始'); },
+            byType: function (type, mine) {
                 if (type === 'bomb') { API.bomb(); }
                 else if (type === 'rocket') { API.rocket(); }
-                else { API.card(); }
+                else { API.card(); if (mine) { say('出牌'); } }
             }
         };
         return API;
@@ -455,13 +486,13 @@
         var pk = d.lastPlay && d.lastPlay.cards ? (d.lastPlay.seat + ':' + d.lastPlay.cards.join(',')) : '';
         if (pk && pk !== s.playKey) {
             s.playKey = pk;
-            sound.byType(d.lastPlay.type);
+            sound.byType(d.lastPlay.type, Number(d.lastPlay.seat) === Number(d.mySeat));
         } else if (!pk) {
             s.playKey = '';
         }
         var passed = d.passed || {};
         Object.keys(passed).forEach(function (seat) {
-            if (passed[seat] && !s.passed[seat]) { sound.pass(); }
+            if (passed[seat] && !s.passed[seat] && Number(seat) !== Number(d.mySeat)) { sound.pass(); }
         });
         s.passed = {};
         Object.keys(passed).forEach(function (seat) { if (passed[seat]) { s.passed[seat] = true; } });
@@ -534,9 +565,10 @@
             poll(true);
         });
     }
-    function pass() {
+    function pass(cantbeat) {
         if (state.busy) { return; }
         state.busy = true; state.selected = {}; state.hintIdx = 0;
+        if (cantbeat) { sound.cantbeat(); } else { sound.pass(); }
         post('pass', { code: state.code }).then(function (r) {
             state.busy = false;
             if (!r.ok) { flash(r.error || '操作失败', false); }
@@ -563,7 +595,7 @@
             if (!hints.length) {
                 if (r.pass) {
                     flash('要不起，已自动不出', false);
-                    pass();
+                    pass(true);
                 } else {
                     flash('没有可出的牌', false);
                 }
