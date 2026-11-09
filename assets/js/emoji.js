@@ -405,6 +405,8 @@
         document.addEventListener('click', function (e) {
             var t = e.target;
             if (wrap.contains(t) || panel.contains(t)) return;
+            if (toggle.contains(t) || searchBtn.contains(t)) return;
+            if (t && t.closest && t.closest('.wc-panel')) return;
             closePanel();
         });
         window.addEventListener('resize', syncDock);
