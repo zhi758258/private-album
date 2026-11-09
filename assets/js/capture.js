@@ -13,9 +13,11 @@
     var CAM = '<svg viewBox="0 0 24 24" class="cam-icon" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
 
     var modal = null;
-    var live, shot, review, timerBox, timerText, shutter, retake, useBtn, hint, tabs, pickBtn;
+    var live, shot, review, timerBox, timerText, shutter, retake, useBtn, hint, tabs, pickBtn, flipBtn;
     var activeForm = null;
     var mode = 'photo';
+    var facing = 'environment';
+    var facingReady = false;
     var stream = null;
     var recorder = null;
     var chunks = [];
@@ -74,6 +76,9 @@
             + '    <img class="capture-shot" alt="照片预览" hidden>'
             + '    <video class="capture-review" controls playsinline hidden></video>'
             + '    <div class="capture-timer" hidden><span class="capture-dot"></span><span class="capture-time">0:00</span></div>'
+            + '    <button type="button" class="capture-flip" aria-label="切换摄像头" title="切换摄像头" hidden>'
+            + '      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9a8 8 0 0 1 13.5-3.5M20 15a8 8 0 0 1-13.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 4v3.5h-3.5M7 20v-3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            + '    </button>'
             + '  </div>'
             + '  <div class="capture-actions">'
             + '    <button type="button" class="btn capture-shutter">拍照</button>'
@@ -98,6 +103,7 @@
         tabs = modal.querySelectorAll('.capture-tab');
         pickBtn = modal.querySelector('.capture-pick');
         pickInput = modal.querySelector('.capture-file');
+        flipBtn = modal.querySelector('.capture-flip');
 
         modal.querySelector('.capture-close').addEventListener('click', close);
         modal.addEventListener('click', function (e) {
@@ -134,6 +140,11 @@
         });
         pickBtn.addEventListener('click', openPicker);
         pickInput.addEventListener('change', onPickedFile);
+        flipBtn.addEventListener('click', function () {
+            if (recorder && recorder.state === 'recording') return;
+            facing = facing === 'environment' ? 'user' : 'environment';
+            requestStream();
+        });
         retake.addEventListener('click', function () {
             if (mode === 'album') {
                 resetLive();
@@ -165,33 +176,58 @@
             shutter.disabled = true;
             return;
         }
-        var constraints = mode === 'video'
-            ? { video: { facingMode: 'user' }, audio: true }
-            : { video: { facingMode: 'user' }, audio: false };
+        var withAudio = mode === 'video';
+        var base = { facingMode: { ideal: facing } };
         shutter.disabled = true;
         setHint('正在打开摄像头…');
-        var request = navigator.mediaDevices.getUserMedia(constraints);
+        var request = navigator.mediaDevices.getUserMedia({ video: base, audio: withAudio });
         var silent = false;
-        if (mode === 'video') {
-            request = request.catch(function (err) {
-                return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }).then(function (s) {
+        if (withAudio) {
+            request = request.catch(function () {
+                return navigator.mediaDevices.getUserMedia({ video: base, audio: false }).then(function (s) {
                     silent = true;
                     return s;
                 });
             });
         }
+        request = request.catch(function () {
+            return navigator.mediaDevices.getUserMedia({ video: true, audio: withAudio });
+        });
         request.then(function (s) {
             stream = s;
             live.srcObject = s;
             live.hidden = false;
+            live.classList.toggle('is-front', facing === 'user');
             var p = live.play();
             if (p && p.catch) p.catch(function () {});
             shutter.disabled = false;
             setHint(silent ? '麦克风不可用，将录制无声视频。' : '');
             updateShutter();
+            updateFlip();
         }).catch(function () {
             shutter.disabled = true;
+            if (flipBtn) flipBtn.hidden = true;
             setHint('无法访问摄像头。请允许权限，并确保通过 HTTPS 访问。', true);
+        });
+    }
+
+    function updateFlip() {
+        if (!flipBtn) return;
+        if (facingReady) {
+            flipBtn.hidden = false;
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            flipBtn.hidden = true;
+            return;
+        }
+        navigator.mediaDevices.enumerateDevices().then(function (list) {
+            var cams = 0;
+            list.forEach(function (d) { if (d.kind === 'videoinput') cams++; });
+            facingReady = true;
+            flipBtn.hidden = cams < 2;
+        }).catch(function () {
+            flipBtn.hidden = true;
         });
     }
 
@@ -247,6 +283,7 @@
         retake.hidden = true;
         useBtn.hidden = true;
         if (pickBtn) pickBtn.hidden = true;
+        if (flipBtn) flipBtn.hidden = true;
         shutter.disabled = !stream;
         updateShutter();
         setHint('');
@@ -261,6 +298,10 @@
         canvas.width = live.videoWidth;
         canvas.height = live.videoHeight;
         var ctx = canvas.getContext('2d');
+        if (facing === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
         ctx.drawImage(live, 0, 0, canvas.width, canvas.height);
         var done = function (b) {
             if (!b) {
@@ -276,6 +317,7 @@
             shot.hidden = false;
             live.hidden = true;
             shutter.hidden = true;
+            if (flipBtn) flipBtn.hidden = true;
             retake.hidden = false;
             useBtn.hidden = false;
             setHint('');
@@ -359,6 +401,7 @@
         review.hidden = false;
         live.hidden = true;
         shutter.hidden = true;
+        if (flipBtn) flipBtn.hidden = true;
         retake.hidden = false;
         useBtn.hidden = false;
         setHint('');
@@ -408,6 +451,7 @@
         }
         shutter.hidden = true;
         if (pickBtn) pickBtn.hidden = true;
+        if (flipBtn) flipBtn.hidden = true;
         retake.hidden = false;
         useBtn.hidden = false;
         setHint('');
@@ -497,6 +541,7 @@
         uploading = false;
         discard = false;
         mode = 'photo';
+        facing = 'environment';
         tabs.forEach(function (x) { x.classList.toggle('is-on', x.getAttribute('data-mode') === 'photo'); });
         resetLive();
         modal.hidden = false;

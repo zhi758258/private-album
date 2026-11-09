@@ -2381,6 +2381,27 @@ img.avatar { display: block; }
 .capture-live[hidden],
 .capture-shot[hidden],
 .capture-review[hidden] { display: none !important; }
+.capture-live.is-front { transform: scaleX(-1); }
+.capture-flip {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    cursor: pointer;
+}
+.capture-flip svg { width: 22px; height: 22px; display: block; }
+.capture-flip:hover { background: rgba(0, 0, 0, 0.65); }
+.capture-flip[hidden] { display: none !important; }
 .capture-timer {
     position: absolute;
     top: 10px;
