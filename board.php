@@ -67,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     flash_set('ok', $parentId > 0 ? '回复已发布。' : '留言已发布。');
-    redirect('/board.php');
+    $back = (string) ($_POST['back'] ?? '');
+    redirect($back === 'home' ? '/index.php' : '/board.php');
 }
 
 $rows = db()->query('

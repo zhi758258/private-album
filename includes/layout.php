@@ -957,6 +957,15 @@ function render_footer(): void
             avatarEl.innerHTML = data.avatar_html;
             nameEl.textContent = data.display_name;
             subEl.textContent = '@' + data.username;
+            var old = subEl.parentNode.querySelector('.user-card-phone');
+            if (old) old.remove();
+            if (data.phone) {
+                var a = document.createElement('a');
+                a.className = 'user-card-phone';
+                a.href = 'tel:' + data.phone;
+                a.textContent = '手机：' + data.phone;
+                subEl.after(a);
+            }
             renderActions(data);
         }
         document.addEventListener('click', function (e) {
@@ -1181,6 +1190,38 @@ function render_footer(): void
         poll();
         setInterval(poll, 12000);
         document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+    })();
+    </script>
+    <script>
+    (function () {
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+            var toggle = e.target.closest('[data-thread-toggle]');
+            if (toggle) {
+                var thread = toggle.closest('[data-thread]');
+                var replies = thread ? thread.querySelector('[data-replies]') : null;
+                if (replies) {
+                    var open = !replies.hidden;
+                    replies.hidden = open;
+                    toggle.classList.toggle('is-open', !open);
+                    var n = replies.querySelectorAll('.msg.reply').length;
+                    toggle.childNodes[0].nodeValue = (open ? '查看 ' : '收起 ') + n + ' 条回复';
+                }
+                return;
+            }
+            var replyBtn = e.target.closest('[data-thread-reply]');
+            if (replyBtn) {
+                var th = replyBtn.closest('[data-thread]');
+                var form = th ? th.querySelector('[data-thread-reply-form]') : null;
+                if (form) {
+                    form.hidden = !form.hidden;
+                    if (!form.hidden) {
+                        var ta = form.querySelector('textarea');
+                        if (ta) ta.focus();
+                    }
+                }
+            }
+        });
     })();
     </script>
 </body>

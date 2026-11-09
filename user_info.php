@@ -16,7 +16,7 @@ if ($id <= 0) {
     exit(json_encode(['ok' => false, 'error' => '参数错误。'], JSON_UNESCAPED_UNICODE));
 }
 
-$stmt = db()->prepare('SELECT id, username, display_name, avatar FROM users WHERE id = :id');
+$stmt = db()->prepare('SELECT id, username, display_name, avatar, phone FROM users WHERE id = :id');
 $stmt->execute([':id' => $id]);
 $row = $stmt->fetch();
 if (!$row) {
@@ -42,6 +42,7 @@ echo json_encode([
     'id' => $targetId,
     'username' => $row['username'],
     'display_name' => $row['display_name'],
+    'phone' => (string) ($row['phone'] ?? ''),
     'avatar_html' => avatar_html($row['avatar'] ?? null, $row['display_name'], 'avatar avatar-lg'),
     'state' => $state,
 ], JSON_UNESCAPED_UNICODE);

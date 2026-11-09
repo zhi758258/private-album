@@ -21,11 +21,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash_set('ok', '昵称已更新。');
         redirect('/profile.php');
     }
+    if ($action === 'contact') {
+        $phone = trim((string) ($_POST['phone'] ?? ''));
+        if ($phone !== '' && !preg_match('/^[0-9+\-\s()]{3,32}$/', $phone)) {
+            flash_set('err', '手机号格式不正确。');
+            redirect('/profile.php');
+        }
+        $phone = mb_substr($phone, 0, 32);
+        $stmt = db()->prepare('UPDATE users SET phone = :phone WHERE id = :id');
+        $stmt->execute([':phone' => $phone, ':id' => $uid]);
+        flash_set('ok', '联系方式已更新。');
+        redirect('/profile.php');
+    }
     flash_set('err', '未知操作。');
     redirect('/profile.php');
 }
 
-$stmt = db()->prepare('SELECT id, username, display_name, avatar, role, created_at FROM users WHERE id = :id');
+$stmt = db()->prepare('SELECT id, username, display_name, avatar, role, phone, created_at FROM users WHERE id = :id');
 $stmt->execute([':id' => $uid]);
 $me = $stmt->fetch();
 if (!$me) {
@@ -50,6 +62,12 @@ render_header('个人中心', $user, '');
         <div class="profile-username">@<?= h($me['username']) ?></div>
         <div class="profile-meta">
             <span class="tag <?= $me['role'] === 'admin' ? 'tag-ok' : '' ?>"><?= $me['role'] === 'admin' ? '管理员' : '用户' ?></span>
+            <?php if (($me['phone'] ?? '') !== ''): ?>
+                <a class="profile-phone" href="tel:<?= h($me['phone']) ?>">
+                    <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M6 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6V20a1 1 0 0 1-1 1A16 16 0 0 1 4 6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                    <?= h($me['phone']) ?>
+                </a>
+            <?php endif; ?>
             <span class="profile-join">加入于 <?= h(date('Y-m-d', strtotime((string) $me['created_at']))) ?></span>
         </div>
     </div>
@@ -74,6 +92,17 @@ render_header('个人中心', $user, '');
         <input name="display_name" type="text" maxlength="40" value="<?= h($me['display_name']) ?>" placeholder="输入新的昵称" required>
         <button type="submit" class="btn">保存</button>
     </form>
+</section>
+
+<section class="panel">
+    <div class="block-head"><h2>联系方式</h2></div>
+    <form method="post" class="profile-form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="contact">
+        <input name="phone" type="tel" maxlength="32" value="<?= h($me['phone'] ?? '') ?>" placeholder="手机号（可留空）">
+        <button type="submit" class="btn">保存</button>
+    </form>
+    <p class="profile-hint">填写后，你的个人中心会显示手机号，好友可点击直接拨打。</p>
 </section>
 
 <section class="panel">

@@ -785,7 +785,48 @@ button:active, .btn:active { transform: translateY(1px) scale(0.99); }
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
 }
+.reply-form[hidden] { display: none !important; }
 .reply-form textarea { min-height: 72px; margin-bottom: 10px; }
+
+/* 留言线程折叠 */
+.thread-replies { margin-top: 4px; }
+.thread-replies[hidden] { display: none !important; }
+.thread-replies .msg.reply:first-child { border-top: 1px solid var(--line); }
+.thread-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.thread-toggle,
+.thread-reply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    padding: 4px 10px;
+    border: none;
+    background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+    color: var(--theme-text);
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.thread-toggle .nav-icon,
+.thread-reply-btn .nav-icon {
+    width: 15px;
+    height: 15px;
+    transition: transform 0.2s ease;
+}
+.thread-toggle.is-open .nav-icon { transform: rotate(180deg); }
+.thread-reply-btn {
+    background: none;
+    color: var(--muted);
+    padding: 4px 6px;
+}
+.thread-reply-btn:hover,
+.thread-toggle:hover { color: var(--theme-text); }
 .memo-card {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -2867,6 +2908,21 @@ img.avatar { display: block; }
 .profile-username { margin-top: 4px; color: var(--muted); font-size: 14px; }
 .profile-meta { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .profile-join { color: var(--muted); font-size: 13px; }
+.profile-phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--theme-text);
+    font-size: 13px;
+}
+.profile-phone .nav-icon { width: 15px; height: 15px; }
+.profile-hint { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+.user-card-phone {
+    display: block;
+    margin-top: 6px;
+    color: var(--theme-text);
+    font-size: 14px;
+}
 .profile-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

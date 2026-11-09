@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name VARCHAR(40) NOT NULL,
     role VARCHAR(10) NOT NULL DEFAULT 'user',
     avatar VARCHAR(100) NULL,
+    phone VARCHAR(32) NOT NULL DEFAULT '',
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_users_username (username)

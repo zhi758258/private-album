@@ -47,6 +47,7 @@ foreach ($rows as $row) {
     }
 }
 $threads = array_reverse($threads);
+$threads = array_slice($threads, 0, 3);
 
 render_header(nav_label('home'), $user, 'home');
 ?>
@@ -56,8 +57,9 @@ render_header(nav_label('home'), $user, 'home');
 <?php if (!$threads): ?>
     <div class="empty">还没有留言。</div>
 <?php else: ?>
-    <?php foreach ($threads as $msg): ?>
-        <article class="msg" id="msg-<?= (int) $msg['id'] ?>">
+    <?php foreach ($threads as $msg):
+        $threadReplies = $replies[(int) $msg['id']] ?? []; ?>
+        <article class="msg thread" id="msg-<?= (int) $msg['id'] ?>" data-thread>
             <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $msg['user_id'] ?>">
                 <?= avatar_html($msg['avatar'] ?? null, $msg['display_name'], 'avatar avatar-sm') ?>
             </button>
@@ -67,20 +69,38 @@ render_header(nav_label('home'), $user, 'home');
                 <?= media_html($msg['media_file'] ?? null, (int) ($msg['media_dur'] ?? 0)) ?>
                 <?= voice_html($msg['voice_file'] ?? null, (int) ($msg['voice_dur'] ?? 0)) ?>
                 <?= location_chip_html($msg['loc_lat'] ?? null, $msg['loc_lng'] ?? null, $msg['loc_name'] ?? '') ?>
-                <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
-                    <article class="msg reply">
-                        <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $reply['user_id'] ?>">
-                            <?= avatar_html($reply['avatar'] ?? null, $reply['display_name'], 'avatar avatar-sm') ?>
+                <div class="thread-replies" data-replies hidden>
+                    <?php foreach ($threadReplies as $reply): ?>
+                        <article class="msg reply">
+                            <button type="button" class="js-user avatar-btn" data-user-id="<?= (int) $reply['user_id'] ?>">
+                                <?= avatar_html($reply['avatar'] ?? null, $reply['display_name'], 'avatar avatar-sm') ?>
+                            </button>
+                            <div class="msg-main">
+                                <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
+                                <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
+                                <?= media_html($reply['media_file'] ?? null, (int) ($reply['media_dur'] ?? 0)) ?>
+                                <?= voice_html($reply['voice_file'] ?? null, (int) ($reply['voice_dur'] ?? 0)) ?>
+                                <?= location_chip_html($reply['loc_lat'] ?? null, $reply['loc_lng'] ?? null, $reply['loc_name'] ?? '') ?>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+                <div class="thread-actions">
+                    <?php if ($threadReplies): ?>
+                        <button type="button" class="thread-toggle" data-thread-toggle>
+                            查看 <?= count($threadReplies) ?> 条回复
+                            <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
-                        <div class="msg-main">
-                            <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
-                            <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
-                            <?= media_html($reply['media_file'] ?? null, (int) ($reply['media_dur'] ?? 0)) ?>
-                            <?= voice_html($reply['voice_file'] ?? null, (int) ($reply['voice_dur'] ?? 0)) ?>
-                            <?= location_chip_html($reply['loc_lat'] ?? null, $reply['loc_lng'] ?? null, $reply['loc_name'] ?? '') ?>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
+                    <?php endif; ?>
+                    <button type="button" class="thread-reply-btn" data-thread-reply>回复</button>
+                </div>
+                <form class="reply-form" method="post" action="/board.php" data-location data-voice data-capture data-thread-reply-form hidden>
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="parent_id" value="<?= (int) $msg['id'] ?>">
+                    <input type="hidden" name="back" value="home">
+                    <textarea name="content" maxlength="1000" placeholder="回复 <?= h($msg['display_name']) ?>" data-emoji></textarea>
+                    <button type="submit">回复</button>
+                </form>
             </div>
         </article>
     <?php endforeach; ?>

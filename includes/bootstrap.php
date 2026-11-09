@@ -148,6 +148,9 @@ function init_schema(PDO $pdo): void
     if (!mysql_column_exists($pdo, 'users', 'avatar')) {
         $pdo->exec('ALTER TABLE users ADD COLUMN avatar VARCHAR(100) NULL');
     }
+    if (!mysql_column_exists($pdo, 'users', 'phone')) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(32) NOT NULL DEFAULT ''");
+    }
     if (!mysql_column_exists($pdo, 'photos', 'on_wall')) {
         $pdo->exec('ALTER TABLE photos ADD COLUMN on_wall TINYINT UNSIGNED NOT NULL DEFAULT 1');
         $pdo->exec('CREATE INDEX idx_photos_wall ON photos (on_wall)');
