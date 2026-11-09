@@ -56,8 +56,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($parentId > 0) {
         $authorId = (int) ($parent['user_id'] ?? 0);
+        $notified = [(int) $user['id'] => true];
         if ($authorId > 0) {
             notification_add($authorId, (int) $user['id'], 'reply', $newId, $user['display_name'] . ' 回复了你的留言：' . $excerpt, '/board.php#msg-' . $parentId);
+            $notified[$authorId] = true;
+        }
+        $parts = db()->prepare('SELECT DISTINCT user_id FROM messages WHERE parent_id = :id');
+        $parts->execute([':id' => $parentId]);
+        foreach ($parts->fetchAll() as $row) {
+            $pid = (int) $row['user_id'];
+            if (isset($notified[$pid])) {
+                continue;
+            }
+            notification_add($pid, (int) $user['id'], 'reply', $newId, $user['display_name'] . ' 在留言板上回复了：' . $excerpt, '/board.php#msg-' . $parentId);
+            $notified[$pid] = true;
         }
     } else {
         $others = db()->prepare('SELECT id FROM users WHERE id <> :me');
