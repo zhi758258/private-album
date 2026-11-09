@@ -65,8 +65,10 @@ function render_header(string $title, array $user, string $active = ''): void
     <script src="/assets/js/emoji.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/emoji.js') ?>" defer></script>
     <script src="/assets/js/location.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/location.js') ?>" defer></script>
     <script src="/assets/js/voice.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/voice.js') ?>" defer></script>
+    <script src="/assets/js/capture.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/capture.js') ?>" defer></script>
+    <script src="/assets/js/call.js?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/call.js') ?>" defer></script>
 </head>
-<body>
+<body data-user-id="<?= (int) $user['id'] ?>">
     <div class="grain"></div>
     <div class="app-shell">
         <div class="nav-mask" hidden></div>

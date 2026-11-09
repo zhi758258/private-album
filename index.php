@@ -64,6 +64,7 @@ render_header(nav_label('home'), $user, 'home');
             <div class="msg-main">
                 <div class="who-line"><?= h($msg['display_name']) ?> #<?= (int) $msg['user_id'] ?> · <?= h($msg['created_at']) ?></div>
                 <p class="msg-text"><?= render_message_html($msg['content']) ?></p>
+                <?= media_html($msg['media_file'] ?? null, (int) ($msg['media_dur'] ?? 0)) ?>
                 <?= voice_html($msg['voice_file'] ?? null, (int) ($msg['voice_dur'] ?? 0)) ?>
                 <?= location_chip_html($msg['loc_lat'] ?? null, $msg['loc_lng'] ?? null, $msg['loc_name'] ?? '') ?>
                 <?php foreach ($replies[(int) $msg['id']] ?? [] as $reply): ?>
@@ -74,6 +75,7 @@ render_header(nav_label('home'), $user, 'home');
                         <div class="msg-main">
                             <div class="who-line"><?= h($reply['display_name']) ?> #<?= (int) $reply['user_id'] ?> · <?= h($reply['created_at']) ?></div>
                             <p class="msg-text"><?= render_message_html($reply['content']) ?></p>
+                            <?= media_html($reply['media_file'] ?? null, (int) ($reply['media_dur'] ?? 0)) ?>
                             <?= voice_html($reply['voice_file'] ?? null, (int) ($reply['voice_dur'] ?? 0)) ?>
                             <?= location_chip_html($reply['loc_lat'] ?? null, $reply['loc_lng'] ?? null, $reply['loc_name'] ?? '') ?>
                         </div>

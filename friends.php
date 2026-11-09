@@ -272,6 +272,7 @@ render_header(nav_label('friends'), $user, 'friends');
                         <div class="friend-sub">@<?= h($f['username']) ?></div>
                     </div>
                     <div class="friend-actions">
+                        <button type="button" class="btn ghost-btn call-start-btn" data-call-user="<?= $fid ?>" data-call-name="<?= h($f['display_name']) ?>">视频通话</button>
                         <a class="btn" href="/chat.php?u=<?= $fid ?>">发消息<?php if ($unread > 0): ?><span class="nav-badge"><?= (int) $unread ?></span><?php endif; ?></a>
                         <form method="post">
                             <?= csrf_field() ?>

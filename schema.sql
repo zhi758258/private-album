@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS messages (
     loc_name VARCHAR(120) NOT NULL DEFAULT '',
     voice_file VARCHAR(100) NULL,
     voice_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    media_file VARCHAR(100) NULL,
+    media_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     KEY idx_messages_user (user_id),
@@ -126,6 +128,8 @@ CREATE TABLE IF NOT EXISTS private_messages (
     loc_name VARCHAR(120) NOT NULL DEFAULT '',
     voice_file VARCHAR(100) NULL,
     voice_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    media_file VARCHAR(100) NULL,
+    media_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     is_read TINYINT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),
@@ -212,6 +216,32 @@ CREATE TABLE IF NOT EXISTS ddz_games (
     PRIMARY KEY (id),
     KEY idx_ddz_games_user (user_id),
     CONSTRAINT fk_ddz_games_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS calls (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    caller_id INT UNSIGNED NOT NULL,
+    callee_id INT UNSIGNED NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'ringing',
+    offer MEDIUMTEXT NULL,
+    answer MEDIUMTEXT NULL,
+    caller_seen DATETIME NULL,
+    callee_seen DATETIME NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_calls_caller (caller_id, status),
+    KEY idx_calls_callee (callee_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS call_ice (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    call_id INT UNSIGNED NOT NULL,
+    sender_id INT UNSIGNED NOT NULL,
+    payload MEDIUMTEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_call_ice (call_id, sender_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

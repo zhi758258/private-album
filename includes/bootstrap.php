@@ -11,10 +11,12 @@ const DATA_DIR = __DIR__ . '/../data';
 const FILES_DIR = __DIR__ . '/../wenjian123';
 const AVATAR_DIR = UPLOAD_DIR . '/avatars';
 const VOICE_DIR = UPLOAD_DIR . '/voice';
+const MEDIA_DIR = UPLOAD_DIR . '/media';
 const CONFIG_FILE = DATA_DIR . '/config.php';
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const MAX_VOICE_BYTES = 6 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 const ALLOWED_MIME = [
     'image/jpeg' => 'jpg',
     'image/png' => 'png',
@@ -46,6 +48,9 @@ if (!is_dir(AVATAR_DIR)) {
 }
 if (!is_dir(VOICE_DIR)) {
     mkdir(VOICE_DIR, 0755, true);
+}
+if (!is_dir(MEDIA_DIR)) {
+    mkdir(MEDIA_DIR, 0755, true);
 }
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
@@ -132,6 +137,11 @@ function init_schema(PDO $pdo): void
             $pdo->exec("ALTER TABLE `{$locTable}`
                 ADD COLUMN voice_file VARCHAR(100) NULL,
                 ADD COLUMN voice_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0");
+        }
+        if (!mysql_column_exists($pdo, $locTable, 'media_file')) {
+            $pdo->exec("ALTER TABLE `{$locTable}`
+                ADD COLUMN media_file VARCHAR(100) NULL,
+                ADD COLUMN media_dur SMALLINT UNSIGNED NOT NULL DEFAULT 0");
         }
     }
     if (!mysql_column_exists($pdo, 'users', 'avatar')) {
@@ -833,6 +843,89 @@ function audio_magic_ok(string $path, string $ext): bool
             return strlen($head) >= 2 && ord($head[0]) === 0xFF && (ord($head[1]) & 0xF6) === 0xF0;
     }
     return false;
+}
+
+function video_magic_ok(string $path, string $ext): bool
+{
+    $fp = @fopen($path, 'rb');
+    if ($fp === false) {
+        return false;
+    }
+    $head = (string) fread($fp, 16);
+    fclose($fp);
+    if ($head === '') {
+        return false;
+    }
+    switch ($ext) {
+        case 'webm':
+            return strncmp($head, "\x1A\x45\xDF\xA3", 4) === 0;
+        case 'mp4':
+        case 'mov':
+            return strlen($head) >= 8 && substr($head, 4, 4) === 'ftyp';
+    }
+    return false;
+}
+
+function media_kind(?string $file): string
+{
+    if ($file === null || $file === '') {
+        return '';
+    }
+    $ext = strtolower((string) pathinfo($file, PATHINFO_EXTENSION));
+    if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+        return 'image';
+    }
+    if (in_array($ext, ['mp4', 'webm', 'mov'], true)) {
+        return 'video';
+    }
+    return '';
+}
+
+function media_from_post(array $post, ?int $ownerId = null): array
+{
+    $file = basename((string) ($post['media_file'] ?? ''));
+    $dur = (int) ($post['media_dur'] ?? 0);
+    if ($file === '' || !preg_match('/^m(\d+)_[a-f0-9]{24}\.(jpg|jpeg|png|gif|webp|mp4|webm|mov)$/', $file, $m)) {
+        return [null, 0];
+    }
+    if ($ownerId !== null && (int) $m[1] !== $ownerId) {
+        return [null, 0];
+    }
+    $realDir = realpath(MEDIA_DIR);
+    $realFile = realpath(MEDIA_DIR . '/' . $file);
+    if ($realDir === false || $realFile === false || !str_starts_with($realFile, $realDir . DIRECTORY_SEPARATOR) || !is_file($realFile)) {
+        return [null, 0];
+    }
+    if ($dur < 0) {
+        $dur = 0;
+    }
+    if ($dur > 600) {
+        $dur = 600;
+    }
+    return [$file, $dur];
+}
+
+function media_html(?string $file, int $dur = 0): string
+{
+    if ($file === null || $file === '') {
+        return '';
+    }
+    if (!preg_match('/^m\d+_[a-f0-9]{24}\.(jpg|jpeg|png|gif|webp|mp4|webm|mov)$/', $file)) {
+        return '';
+    }
+    $src = '/media.php?f=' . rawurlencode($file);
+    $kind = media_kind($file);
+    if ($kind === 'image') {
+        return '<a class="msg-media" href="' . h($src) . '" target="_blank" rel="noopener noreferrer" aria-label="查看照片">'
+            . '<img src="' . h($src) . '" alt="照片" loading="lazy"></a>';
+    }
+    if ($kind === 'video') {
+        $label = $dur > 0 ? h(fmt_duration($dur)) : '视频';
+        return '<div class="msg-video-wrap">'
+            . '<video class="msg-video" controls preload="metadata" playsinline src="' . h($src) . '"></video>'
+            . '<span class="msg-video-dur">' . $label . '</span></div>';
+    }
+    return '';
 }
 
 function space_can_view(int $viewerId, int $targetId, string $viewerRole): bool
