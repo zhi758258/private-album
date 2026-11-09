@@ -404,76 +404,59 @@
     /* ===== 渲染 ===== */
     function draw() {
         var cam = state.cam;
-        // 地面
-        ctx.fillStyle = '#6f6a5c';
-        ctx.fillRect(0, 0, W, H);
-        var tile = 96;
-        var x0 = Math.floor(cam.x / tile) * tile;
-        var y0 = Math.floor(cam.y / tile) * tile;
-        for (var gx = x0; gx < cam.x + W + tile; gx += tile) {
-            for (var gy = y0; gy < cam.y + H + tile; gy += tile) {
-                var sx = gx - cam.x, sy = gy - cam.y;
-                var even = ((Math.round(gx / tile) + Math.round(gy / tile)) % 2) === 0;
-                ctx.fillStyle = even ? '#7c7666' : '#726c5e';
-                ctx.fillRect(sx, sy, tile, tile);
-                ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(sx + 0.5, sy + 0.5, tile - 1, tile - 1);
-            }
-        }
+        drawFloor(cam);
 
         function inView(x, y, pad) {
-            pad = pad || 60;
+            pad = pad || 80;
             return x - cam.x > -pad && x - cam.x < W + pad && y - cam.y > -pad && y - cam.y < H + pad;
         }
 
-        // 草丛
         state.grass.forEach(function (g) {
             if (g.cut || !inView(g.x, g.y, g.size)) { return; }
             drawGrass(g.x - cam.x, g.y - cam.y, g.size, state.t, g.sway);
         });
-        // 宝箱
         state.chests.forEach(function (c) {
             if (!inView(c.x, c.y)) { return; }
             drawChest(c.x - cam.x, c.y - cam.y, c.opened);
         });
-        // 掉落道具
         state.pickups.forEach(function (pu) {
             if (!inView(pu.x, pu.y)) { return; }
             drawPickup(pu.x - cam.x, pu.y - cam.y, pu.level, state.t + pu.bob);
         });
-
-        // 敌人
         state.enemies.forEach(function (e) {
             if (!inView(e.x, e.y)) { return; }
             drawEnemy(e, e.x - cam.x, e.y - cam.y);
         });
 
-        // 玩家 + 月牙
         var px = state.player.x - cam.x, py = state.player.y - cam.y;
+        // 月牙（先画，位于角色下层）
         state.bladePos.forEach(function (bp) {
-            drawCrescent(bp.x - cam.x, bp.y - cam.y, bp.ang, levelColor(bp.blade.level), levelGlow(bp.blade.level), 26);
+            drawCrescent(bp.x - cam.x, bp.y - cam.y, bp.ang, levelColor(bp.blade.level), levelGlow(bp.blade.level), 32);
         });
         drawPlayer(px, py);
-
-        // 玩家血条 + 月牙数量
         drawPlayerBar(px, py);
-        ctx.font = 'bold 20px system-ui, sans-serif';
+
+        // 月牙数量
+        var cnt = String(state.blades.length);
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#2a2118';
-        ctx.fillText(String(state.blades.length), px, py - 40);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(String(state.blades.length), px, py - 42);
+        ctx.textBaseline = 'middle';
+        ctx.font = '900 22px "Arial Black", system-ui, sans-serif';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'rgba(30,22,10,0.85)';
+        ctx.strokeText(cnt, px, py - 46);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(cnt, px, py - 46);
 
         // 飘字
         state.dmg.forEach(function (d) {
             var sx = d.x - cam.x, sy = d.y - cam.y;
             var a = Math.max(0, d.life / d.life0);
             ctx.globalAlpha = a;
-            ctx.font = (d.player ? 'bold 18px' : 'bold 22px') + ' system-ui, sans-serif';
             ctx.textAlign = 'center';
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.textBaseline = 'middle';
+            ctx.font = '900 ' + (d.player ? 18 : 22) + 'px "Arial Black", system-ui, sans-serif';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(30,22,10,0.9)';
             ctx.strokeText(String(d.val), sx, sy);
             ctx.fillStyle = d.color;
             ctx.fillText(String(d.val), sx, sy);
@@ -483,37 +466,108 @@
         state.particles.forEach(function (pt) {
             ctx.globalAlpha = Math.max(0, pt.life / 0.7);
             ctx.fillStyle = pt.color;
-            ctx.fillRect(pt.x - cam.x - 2, pt.y - cam.y - 2, 4, 4);
+            ctx.beginPath(); ctx.arc(pt.x - cam.x, pt.y - cam.y, 3, 0, Math.PI * 2); ctx.fill();
             ctx.globalAlpha = 1;
         });
 
-        // 拖拽指示
+        // 拖拽摇杆
         if (dragging) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(dragStart.x, dragStart.y, 42, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(dragCur.x, dragCur.y, 20, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fill();
+            var dx = dragCur.x - dragStart.x, dy = dragCur.y - dragStart.y;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            var baseR = 46;
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.beginPath(); ctx.arc(dragStart.x, dragStart.y, baseR, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(dragStart.x, dragStart.y, baseR, 0, Math.PI * 2); ctx.stroke();
+            var k = Math.min(1, len / baseR);
+            var kx = dragStart.x + (len ? dx / len * baseR * k : 0);
+            var ky = dragStart.y + (len ? dy / len * baseR * k : 0);
+            ctx.globalAlpha = 0.85;
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath(); ctx.arc(kx, ky, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        drawVignette();
+    }
+
+    function drawFloor(cam) {
+        var tile = 108;
+        var x0 = Math.floor(cam.x / tile) * tile;
+        var y0 = Math.floor(cam.y / tile) * tile;
+        for (var gx = x0; gx < cam.x + W + tile; gx += tile) {
+            for (var gy = y0; gy < cam.y + H + tile; gy += tile) {
+                var sx = gx - cam.x, sy = gy - cam.y;
+                var even = ((Math.round(gx / tile) + Math.round(gy / tile)) % 2) === 0;
+                ctx.fillStyle = even ? '#8b8472' : '#7f7869';
+                ctx.fillRect(sx, sy, tile, tile);
+                // 石纹
+                ctx.strokeStyle = 'rgba(60,55,45,0.35)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(sx + 1, sy + 1, tile - 2, tile - 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(sx + 4, sy + 4, tile - 8, tile - 8);
+                // 花砖圆纹
+                if (even) {
+                    var cx = sx + tile / 2, cy = sy + tile / 2;
+                    ctx.strokeStyle = 'rgba(120,70,50,0.16)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(cx, cy, tile * 0.32, 0, Math.PI * 2); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx, cy, tile * 0.2, 0, Math.PI * 2); ctx.stroke();
+                    for (var a = 0; a < 8; a++) {
+                        var ang = a / 8 * Math.PI * 2;
+                        ctx.beginPath();
+                        ctx.moveTo(cx + Math.cos(ang) * tile * 0.2, cy + Math.sin(ang) * tile * 0.2);
+                        ctx.lineTo(cx + Math.cos(ang) * tile * 0.32, cy + Math.sin(ang) * tile * 0.32);
+                        ctx.stroke();
+                    }
+                }
+            }
         }
     }
 
+    function drawVignette() {
+        var g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,0.32)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+    }
+
     function drawGrass(x, y, size, t, sway) {
-        var n = 9;
         ctx.save();
-        ctx.strokeStyle = '#4caf3f';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
+        ctx.translate(x, y);
+        // 底部阴影
+        ctx.fillStyle = 'rgba(30,60,20,0.25)';
+        ctx.beginPath(); ctx.ellipse(0, size * 0.3, size * 0.5, size * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+        var n = 11;
         for (var i = 0; i < n; i++) {
-            var ox = (i - (n - 1) / 2) * (size / n);
-            var h = size * 0.9 + Math.sin(t * 2 + sway + i) * 4;
+            var ox = (i - (n - 1) / 2) * (size / (n - 0.5));
+            var h = size * (0.7 + 0.4 * Math.abs(Math.sin(i * 1.7)));
+            var bend = Math.sin(t * 2 + sway + i * 0.5) * 6;
+            var grad = ctx.createLinearGradient(0, size * 0.3, 0, size * 0.3 - h);
+            grad.addColorStop(0, '#2f7a1e');
+            grad.addColorStop(0.5, '#57c93a');
+            grad.addColorStop(1, '#a4e85a');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(x + ox, y + size * 0.35);
-            ctx.quadraticCurveTo(x + ox + Math.sin(t * 2 + i) * 6, y + size * 0.35 - h * 0.6, x + ox + Math.sin(t * 2 + i) * 10, y + size * 0.35 - h);
+            ctx.moveTo(ox, size * 0.3);
+            ctx.quadraticCurveTo(ox + bend * 0.5, size * 0.3 - h * 0.6, ox + bend, size * 0.3 - h);
             ctx.stroke();
+        }
+        // 顶部亮叶
+        ctx.fillStyle = '#b6f06a';
+        for (var j = 0; j < 4; j++) {
+            var lx = (j - 1.5) * (size / 6);
+            ctx.beginPath();
+            ctx.ellipse(lx, size * 0.3 - size * 0.75, size * 0.06, size * 0.16, (j - 1.5) * 0.3, 0, Math.PI * 2);
+            ctx.fill();
         }
         ctx.restore();
     }
@@ -521,135 +575,252 @@
     function drawChest(x, y, opened) {
         ctx.save();
         ctx.translate(x, y);
-        ctx.fillStyle = opened ? '#7a5a30' : '#8a5a22';
-        ctx.strokeStyle = '#d4af37';
-        ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.rect(-26, -18, 52, 36); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#d4af37';
-        ctx.fillRect(-26, opened ? -26 : -6, 52, 6);
-        ctx.beginPath(); ctx.arc(0, 2, 5, 0, Math.PI * 2); ctx.fillStyle = '#5a3d12'; ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath(); ctx.ellipse(0, 20, 30, 10, 0, 0, Math.PI * 2); ctx.fill();
         if (!opened) {
-            var g = ctx.createRadialGradient(0, 0, 2, 0, 0, 40);
-            g.addColorStop(0, 'rgba(255,220,120,0.5)');
-            g.addColorStop(1, 'rgba(255,220,120,0)');
-            ctx.fillStyle = g;
-            ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+            var glow = ctx.createRadialGradient(0, -6, 4, 0, -6, 52);
+            glow.addColorStop(0, 'rgba(255,220,120,0.55)');
+            glow.addColorStop(1, 'rgba(255,220,120,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath(); ctx.arc(0, -6, 52, 0, Math.PI * 2); ctx.fill();
         }
+        // 箱体
+        var bodyGrad = ctx.createLinearGradient(0, -18, 0, 20);
+        bodyGrad.addColorStop(0, '#b9793a');
+        bodyGrad.addColorStop(1, '#7d4c1f');
+        ctx.fillStyle = bodyGrad;
+        roundRect(-28, -14, 56, 34, 6); ctx.fill();
+        ctx.strokeStyle = '#5a3613'; ctx.lineWidth = 2.5; ctx.stroke();
+        // 盖子
+        var lidH = opened ? 10 : 16;
+        var lidGrad = ctx.createLinearGradient(0, -30, 0, -14);
+        lidGrad.addColorStop(0, '#d59a52');
+        lidGrad.addColorStop(1, '#a86a2c');
+        ctx.fillStyle = lidGrad;
+        ctx.save();
+        if (opened) { ctx.translate(0, -14); ctx.rotate(-0.5); ctx.translate(0, 14); }
+        roundRect(-28, -14 - lidH, 56, lidH, 6); ctx.fill();
+        ctx.strokeStyle = '#5a3613'; ctx.stroke();
+        ctx.restore();
+        // 金边
+        ctx.fillStyle = '#f2c14e';
+        ctx.fillRect(-28, -4, 56, 5);
+        ctx.fillRect(-28, opened ? 6 : 12, 56, 5);
+        ctx.fillRect(-5, -14, 10, 34);
+        // 锁扣
+        ctx.fillStyle = '#ffe08a';
+        ctx.beginPath(); ctx.arc(0, 2, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#7a4a12';
+        ctx.beginPath(); ctx.arc(0, 2, 2.2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 
     function drawPickup(x, y, level, t) {
-        var bob = Math.sin(t * 3) * 4;
+        var bob = Math.sin(t * 3) * 5;
         ctx.save();
         ctx.translate(x, y + bob);
-        var r = 20;
-        var g = ctx.createRadialGradient(0, 0, 2, 0, 0, r + 10);
-        g.addColorStop(0, levelGlow(level));
-        g.addColorStop(0.6, 'rgba(255,255,255,0.15)');
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(0, 0, r + 10, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fill();
+        var r = 19;
+        var glow = ctx.createRadialGradient(0, 0, 2, 0, 0, r + 16);
+        glow.addColorStop(0, levelGlow(level));
+        glow.addColorStop(0.5, 'rgba(255,255,255,0.25)');
+        glow.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(0, 0, r + 16, 0, Math.PI * 2); ctx.fill();
+        // 白色玻璃球
+        var ball = ctx.createRadialGradient(-6, -6, 2, 0, 0, r);
+        ball.addColorStop(0, 'rgba(255,255,255,0.98)');
+        ball.addColorStop(0.7, 'rgba(255,255,255,0.7)');
+        ball.addColorStop(1, 'rgba(230,230,230,0.6)');
+        ctx.fillStyle = ball;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = levelColor(level); ctx.lineWidth = 3; ctx.stroke();
-        drawCrescentShape(0, 0, -0.6, levelColor(level), 14);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, r - 2.5, 0, Math.PI * 2); ctx.stroke();
+        drawCrescentShape(0, 1, -0.5, levelColor(level), 13);
+        // 高光
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.ellipse(-6, -7, 3.5, 2.4, -0.6, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 
     function drawCrescent(x, y, ang, color, glow, size) {
         ctx.save();
         ctx.translate(x, y);
+        // 外层光晕
+        ctx.save();
         ctx.rotate(ang);
-        var g = ctx.createRadialGradient(0, 0, 2, 0, 0, size * 1.4);
+        var g = ctx.createRadialGradient(0, 0, 4, 0, 0, size * 2.1);
         g.addColorStop(0, glow);
+        g.addColorStop(0.55, hexA(color, 0.35));
         g.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(0, 0, size * 1.4, 0, Math.PI * 2); ctx.fill();
-        drawCrescentShape(0, 0, Math.PI * 0.5, color, size);
+        ctx.beginPath(); ctx.arc(0, 0, size * 2.1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.rotate(ang + 0.7);
+        drawCrescentShape(0, 0, 0, color, size, true);
         ctx.restore();
     }
 
-    function drawCrescentShape(x, y, rot, color, size) {
+    function hexA(hex, a) {
+        var h = hex.replace('#', '');
+        if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+        var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    // 厚实的月牙：白色描边 + 颜色渐变
+    function drawCrescentShape(x, y, rot, color, size, rim) {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rot);
-        ctx.beginPath();
-        ctx.moveTo(0, -size);
-        ctx.quadraticCurveTo(size * 0.95, -size * 0.2, size * 0.5, size * 0.7);
-        ctx.quadraticCurveTo(size * 0.15, size * 0.05, 0, -size * 0.25);
-        ctx.quadraticCurveTo(-size * 0.1, -size * 0.75, 0, -size);
-        ctx.closePath();
-        var g = ctx.createLinearGradient(-size, -size, size, size);
+        function moon() {
+            ctx.beginPath();
+            ctx.moveTo(0, -size);
+            ctx.bezierCurveTo(size * 1.05, -size * 0.55, size * 1.02, size * 0.55, size * 0.12, size * 0.98);
+            ctx.bezierCurveTo(size * 0.5, size * 0.5, size * 0.55, -size * 0.35, 0, -size);
+            ctx.closePath();
+        }
+        var g = ctx.createLinearGradient(-size * 0.4, -size, size * 0.8, size);
         g.addColorStop(0, '#ffffff');
-        g.addColorStop(0.4, color);
+        g.addColorStop(0.35, color);
         g.addColorStop(1, color);
         ctx.fillStyle = g;
-        ctx.fill();
+        if (rim) { ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; }
+        moon(); ctx.fill();
+        if (rim) { ctx.stroke(); ctx.lineWidth = 1.5; ctx.strokeStyle = hexA(color, 0.6); }
         ctx.restore();
     }
 
     function drawPlayer(x, y) {
         ctx.save();
         ctx.translate(x, y);
+        ctx.scale(1.28, 1.28);
+        var f = state.player.face;
         // 影子
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.beginPath(); ctx.ellipse(0, 24, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
-        // 身体
-        ctx.fillStyle = '#f4f6fb';
-        ctx.strokeStyle = '#5b6b8a';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-14, -6); ctx.lineTo(14, -6); ctx.lineTo(16, 20); ctx.lineTo(-16, 20); ctx.closePath();
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath(); ctx.ellipse(0, 26, 24, 9, 0, 0, Math.PI * 2); ctx.fill();
+        if (state.player.hurt > 0 && Math.floor(state.player.hurt * 20) % 2 === 0) { ctx.globalAlpha = 0.5; }
+        // 剑（先画，在身后）
+        ctx.save();
+        ctx.scale(f, 1);
+        ctx.strokeStyle = '#e8eef6'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(10, 6); ctx.lineTo(34, -16); ctx.stroke();
+        ctx.strokeStyle = '#b9c3d2'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(10, 6); ctx.lineTo(34, -16); ctx.stroke();
+        ctx.fillStyle = '#8a5a2a';
+        ctx.fillRect(4, 2, 8, 8);
+        ctx.restore();
+        // 袍子
+        var robe = ctx.createLinearGradient(0, -8, 0, 24);
+        robe.addColorStop(0, '#ffffff');
+        robe.addColorStop(1, '#dbe3ef');
+        ctx.fillStyle = robe;
+        ctx.strokeStyle = '#8a99b5'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-15, -8); ctx.lineTo(15, -8);
+        ctx.quadraticCurveTo(20, 8, 17, 24);
+        ctx.lineTo(-17, 24);
+        ctx.quadraticCurveTo(-20, 8, -15, -8);
+        ctx.closePath();
         ctx.fill(); ctx.stroke();
+        // 衣襟
+        ctx.strokeStyle = '#c3cddd'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 22); ctx.stroke();
         // 腰带
-        ctx.fillStyle = '#3f6dc4'; ctx.fillRect(-16, 6, 32, 6);
+        ctx.fillStyle = '#2f6bd0';
+        ctx.fillRect(-17, 4, 34, 7);
+        ctx.fillStyle = '#1c4fa8';
+        ctx.fillRect(-17, 9, 34, 2);
+        // 领口
+        ctx.fillStyle = '#6a86c9';
+        ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(0, -2); ctx.lineTo(6, -8); ctx.closePath(); ctx.fill();
         // 头
-        ctx.fillStyle = '#ffd9b8';
-        ctx.beginPath(); ctx.arc(0, -16, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffe0c2';
+        ctx.beginPath(); ctx.arc(0, -18, 12.5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#e0b48f'; ctx.lineWidth = 1.5; ctx.stroke();
         // 头发
-        ctx.fillStyle = '#20242c';
-        ctx.beginPath(); ctx.arc(0, -19, 12, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -22, 5, 0, Math.PI * 2); ctx.fill();
-        // 剑
-        ctx.strokeStyle = '#cfd6e0'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(12 * state.player.face, 4); ctx.lineTo(30 * state.player.face, -14); ctx.stroke();
+        ctx.fillStyle = '#1d222b';
+        ctx.beginPath(); ctx.arc(0, -21, 13, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
+        ctx.beginPath(); ctx.arc(-11, -16, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(11, -16, 4.5, 0, Math.PI * 2); ctx.fill();
+        // 发髻
+        ctx.beginPath(); ctx.arc(0, -31, 6, 0, Math.PI * 2); ctx.fill();
+        // 红丝带
+        ctx.strokeStyle = '#e5342b'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(4, -33); ctx.quadraticCurveTo(14, -38, 18, -30); ctx.stroke();
+        // 眼睛
+        ctx.fillStyle = '#2a2f38';
+        ctx.beginPath(); ctx.arc(-4.5, -17, 1.8, 0, Math.PI * 2); ctx.arc(4.5, -17, 1.8, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 
     function drawPlayerBar(x, y) {
-        var w = 64, h = 7;
+        var w = 66, h = 9, yy = y + 32;
         var ratio = clamp(state.player.hp / state.player.maxHp, 0, 1);
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(x - w / 2 - 1, y + 30 - 1, w + 2, h + 2);
-        ctx.fillStyle = ratio > 0.5 ? '#3ddc5a' : ratio > 0.25 ? '#ffb800' : '#ff3b3b';
-        ctx.fillRect(x - w / 2, y + 30, w * ratio, h);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        roundRect(x - w / 2 - 2, yy - 2, w + 4, h + 4, 5); ctx.fill();
+        var g = ctx.createLinearGradient(0, yy, 0, yy + h);
+        if (ratio > 0.5) { g.addColorStop(0, '#7dff8a'); g.addColorStop(1, '#1fb84a'); }
+        else if (ratio > 0.25) { g.addColorStop(0, '#ffe07a'); g.addColorStop(1, '#f19a10'); }
+        else { g.addColorStop(0, '#ff9b9b'); g.addColorStop(1, '#e02626'); }
+        ctx.fillStyle = g;
+        roundRect(x - w / 2, yy, w * ratio, h, 4); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
+        roundRect(x - w / 2, yy, w, h, 4); ctx.stroke();
+    }
+
+    function roundRect(x, y, w, h, r) {
+        if (w < 2 * r) { r = w / 2; }
+        if (h < 2 * r) { r = h / 2; }
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
     }
 
     function drawEnemy(e, x, y) {
         ctx.save();
         ctx.translate(x, y);
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.beginPath(); ctx.ellipse(0, 20, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
-        if (e.type === 'brute') {
-            ctx.fillStyle = '#7a1f2b';
-            ctx.beginPath(); ctx.arc(0, 0, e.r + 2, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#c23a4b';
-            ctx.beginPath(); ctx.arc(0, -2, e.r - 4, 0, Math.PI * 2); ctx.fill();
-        } else {
-            ctx.fillStyle = '#2a2f38';
-            ctx.beginPath(); ctx.arc(0, 0, e.r, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#8e6a4a';
-            ctx.beginPath(); ctx.arc(0, -3, e.r - 6, 0, Math.PI * 2); ctx.fill();
-        }
-        // 眼睛
-        ctx.fillStyle = '#ffe07a';
-        ctx.beginPath(); ctx.arc(-5, -2, 2.4, 0, Math.PI * 2); ctx.arc(5, -2, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath(); ctx.ellipse(0, 22, e.r * 0.9, e.r * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+        // 身体（敌人：黑袍红纹）
+        var body = ctx.createLinearGradient(0, -e.r, 0, e.r + 10);
+        if (e.type === 'brute') { body.addColorStop(0, '#4a2030'); body.addColorStop(1, '#7a1f2b'); }
+        else { body.addColorStop(0, '#2b303a'); body.addColorStop(1, '#171b22'); }
+        ctx.fillStyle = body;
+        ctx.strokeStyle = e.type === 'brute' ? '#c23a4b' : '#3f4754';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-e.r, 14);
+        ctx.quadraticCurveTo(-e.r - 4, -e.r, 0, -e.r - 2);
+        ctx.quadraticCurveTo(e.r + 4, -e.r, e.r, 14);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        // 头
+        ctx.fillStyle = '#c9a07a';
+        ctx.beginPath(); ctx.arc(0, -e.r - 2, e.r * 0.62, 0, Math.PI * 2); ctx.fill();
+        // 头发
+        ctx.fillStyle = '#1a1e26';
+        ctx.beginPath(); ctx.arc(0, -e.r - 5, e.r * 0.62, Math.PI, Math.PI * 2); ctx.fill();
+        // 红飘带
+        ctx.strokeStyle = '#c23a4b'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(0, -e.r - 9); ctx.quadraticCurveTo(e.r, -e.r - 16, e.r * 1.2, -e.r - 4); ctx.stroke();
+        // 眼睛（发光）
+        ctx.fillStyle = e.type === 'brute' ? '#ff6b6b' : '#ffd34d';
+        ctx.beginPath(); ctx.arc(-e.r * 0.25, -e.r - 2, 2.2, 0, Math.PI * 2); ctx.arc(e.r * 0.25, -e.r - 2, 2.2, 0, Math.PI * 2); ctx.fill();
         // 血条
-        var w = 40, h = 5;
-        var ratio = clamp(e.hp / e.maxHp, 0, 1);
+        var w = e.r * 2, h = 6, yy = -e.r - 20;
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(-w / 2 - 1, -e.r - 14, w + 2, h + 2);
-        ctx.fillStyle = '#ff4d4d';
-        ctx.fillRect(-w / 2, -e.r - 13, w * ratio, h);
+        roundRect(-w / 2 - 1, yy - 1, w + 2, h + 2, 3); ctx.fill();
+        var ratio = clamp(e.hp / e.maxHp, 0, 1);
+        var g = ctx.createLinearGradient(0, yy, 0, yy + h);
+        if (e.type === 'brute') { g.addColorStop(0, '#ff8a8a'); g.addColorStop(1, '#d11f1f'); }
+        else { g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#c02020'); }
+        ctx.fillStyle = g;
+        roundRect(-w / 2, yy, w * ratio, h, 3); ctx.fill();
         ctx.restore();
     }
 
